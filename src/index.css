@@ -1,0 +1,322 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #0a0f1c;
+  font-family: "Rubik", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+.font-pixel {
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Habbo-ish pixel UI ---------- */
+.pixel-panel {
+  background: linear-gradient(180deg, #1c2a4a 0%, #151f38 100%);
+  border: 3px solid #0a1024;
+  box-shadow:
+    inset 0 0 0 2px #2f4675,
+    inset 0 3px 0 0 #46639e,
+    0 6px 0 0 rgba(0, 0, 0, 0.45),
+    0 12px 30px rgba(0, 0, 0, 0.55);
+}
+
+.pixel-btn {
+  position: relative;
+  border: 2px solid #0a1024;
+  box-shadow:
+    inset 0 2px 0 0 rgba(255, 255, 255, 0.28),
+    inset 0 -3px 0 0 rgba(0, 0, 0, 0.32),
+    0 3px 0 0 rgba(0, 0, 0, 0.45);
+  transition:
+    transform 0.06s ease,
+    filter 0.12s ease;
+}
+.pixel-btn:hover:not(:disabled) {
+  filter: brightness(1.14);
+}
+.pixel-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 0 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 0 0 rgba(0, 0, 0, 0.3);
+}
+.pixel-btn:disabled {
+  filter: grayscale(0.75) brightness(0.72);
+  cursor: not-allowed;
+}
+
+.pixel-inset {
+  background: #0c1428;
+  border: 2px solid #060a16;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.bar-track {
+  background: #0a1122;
+  border: 2px solid #060a16;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 55%);
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #3c5party #101a30;
+  scrollbar-color: #3c568f #101a30;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 10px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: #0c1428;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #3c568f;
+  border: 2px solid #0c1428;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+  }
+}
+.toast-item {
+  animation: floatUp 3.4s ease forwards;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.pop-in {
+  animation: popIn 0.18s ease-out;
+}
+
+@keyframes pulseKey {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.key-bounce {
+  animation: pulseKey 1.1s ease-in-out infinite;
+}
+
+@keyframes scanline {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 100px;
+  }
+}
+.crt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.16) 0px,
+    rgba(0, 0, 0, 0.16) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.35;
+}
+
+/* ---------- DESIGN SYSTEM PREMIUM (PIXEL ART) ---------- */
+:root {
+  --hud-bg: linear-gradient(180deg, #16233f 0%, #0d1727 100%);
+  --hud-border: #263b60;
+  --hud-glow: rgba(67, 220, 255, 0.35);
+  --accent-cyan: #43dcff;
+  --accent-gold: #ffd65a;
+  --accent-army: #7ba548;
+  --accent-danger: #ef5d65;
+  --accent-ok: #55e294;
+  --shadow-drop: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.hud-card {
+  background: var(--hud-bg);
+  border: 1px solid var(--hud-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    var(--shadow-drop),
+    0 0 14px rgba(67, 220, 255, 0.06);
+  border-radius: 2px;
+}
+
+.hud-inset {
+  background: #06111e;
+  border: 1px solid #0a1a2b;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.55);
+}
+
+/* Barras de status com brilho neon sutil */
+.status-bar {
+  height: 100%;
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 55%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0px, rgba(255, 255, 255, 0.08) 1px, transparent 1px, transparent 4px);
+  background-size: 100% 100%, 4px 100%;
+}
+
+/* HUD slot da hotbar (mais elegante) */
+.slot {
+  background: linear-gradient(180deg, #0e1a2e 0%, #08111c 100%);
+  border: 1px solid #1e2f4c;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -8px 12px rgba(0, 0, 0, 0.45);
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.slot:hover {
+  border-color: #3d5c8b;
+  transform: translateY(-1px);
+}
+.slot.slot-active {
+  border-color: var(--accent-cyan);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 12px rgba(67, 220, 255, 0.35);
+}
+
+/* Chat bubble estilo MMO */
+.chat-bubble {
+  animation: chatBubbleIn 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes chatBubbleIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ícone com respiração para valores importantes */
+.pulse-glow {
+  animation: pulseGlow 2.4s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(255, 214, 90, 0.35)); }
+  50% { filter: drop-shadow(0 0 8px rgba(255, 214, 90, 0.7)); }
+}
+
+/* Toast/microfeedback (dinheiro, xp, dano) */
+@keyframes fxRise {
+  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-22px) scale(1); }
+}
+.fx-rise { animation: fxRise 2.6s ease-out forwards; }
+
+@keyframes numSpin {
+  0% { transform: translateY(-6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.num-spin { animation: numSpin 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Card modal moderno */
+.premium-modal {
+  background: linear-gradient(180deg, #182740 0%, #0d1727 100%);
+  border: 1px solid var(--hud-border);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(67, 220, 255, 0.08);
+}
+
+/* Vinheta sutil sobre o canvas para dar atmosfera */
+.canvas-atmosphere {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.35) 100%),
+    linear-gradient(180deg, rgba(97, 149, 214, 0.06) 0%, rgba(0, 0, 0, 0) 40%);
+}
+
+.neon-panel {
+  background: linear-gradient(145deg, rgba(18, 29, 50, 0.96), rgba(8, 14, 27, 0.98));
+  border: 1px solid #263b60;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 14px 40px rgba(0, 0, 0, 0.28),
+    0 0 22px rgba(67, 220, 255, 0.035);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.neon-panel:hover {
+  border-color: #365983;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 14px 40px rgba(0, 0, 0, 0.32),
+    0 0 28px rgba(67, 220, 255, 0.07);
+}
+
+.portal-shell {
+  position: relative;
+  background-image:
+    linear-gradient(rgba(55, 91, 132, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(55, 91, 132, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 50% -20%, #183b61 0%, #070b14 45%);
+  background-size: 32px 32px, 32px 32px, 100% 100%;
+}
+
+.portal-shell main > div {
+  animation: portalRise 320ms ease-out;
+}
+
+@keyframes portalRise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes neonBreath {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.12); }
+}
+
+.portal-shell header .font-pixel:first-child {
+  animation: neonBreath 3.2s ease-in-out infinite;
+}
