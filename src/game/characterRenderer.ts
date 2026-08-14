@@ -43,9 +43,9 @@ export interface CharacterOpts {
 }
 
 /**
- * Renderizador de Avatar Pixel Art Altamente Arredondado.
- * - Cabelos de costas totalmente customizados por estilo.
- * - Conexão sólida de pernas e canelas aos pés.
+ * Renderizador de Avatar Pixel Art.
+ * - Correção do cabelo de costas (cobertura total do crânio sem calvície).
+ * - Cabelos arredondados e caimento proporcional nas costas.
  */
 export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
   const pele = opts.pele ?? "#f0c396";
@@ -131,86 +131,75 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
 
   const hY = -28 + breathY;
 
-  // ── 1. CABELO TRASEIRO (Customizado e Arredondado por Estilo) ──
+  // ── 1. CABELO TRASEIRO E CAMADAS DE COSTAS ──
   const drawBackHair = () => {
     const style = cabeloEstilo;
 
     // QUANDO DE COSTAS (dir === "up")
     if (dir === "up") {
+      // COBERTURA COMPLETA DA CABEÇA (Evita o efeito careca)
+      R(-2, hY - 3, 4, 1, opts.cabelo);
+      R(-4, hY - 2, 8, 1, opts.cabelo);
+      R(-5, hY - 1, 10, 10, opts.cabelo);
+      R(-4, hY - 2, 8, 1, hHighlight);
+
       switch (style) {
         case "longo":
         case "longo_liso":
         case "ondulado":
-          // Cabelo longo volumoso nas costas com formato em oval
-          R(-3, hY, 6, 1, opts.cabelo);
-          R(-5, hY + 1, 10, 1, opts.cabelo);
-          R(-6, hY + 2, 12, 10, opts.cabelo);
-          R(-5, hY + 12, 10, 2, opts.cabelo);
-          R(-3, hY + 14, 6, 1, hShadow); // Arredondamento inferior
-          // Sombreamento e Brilho das costas
-          R(-4, hY + 2, 8, 1, hHighlight);
-          R(-6, hY + 4, 1, 8, hShadow);
-          R(5, hY + 4, 1, 8, hShadow);
+          // Caimento volumoso pelas costas até a cintura
+          R(-6, hY + 2, 12, 11, opts.cabelo);
+          R(-5, hY + 13, 10, 2, opts.cabelo);
+          R(-3, hY + 15, 6, 1, hShadow);
+          // Sombreamentos
+          R(-6, hY + 3, 1, 10, hShadow);
+          R(5, hY + 3, 1, 10, hShadow);
+          R(-4, hY + 1, 8, 2, hHighlight);
           break;
 
         case "bob":
-          // Bob curto e curvado para dentro
-          R(-3, hY, 6, 1, opts.cabelo);
-          R(-5, hY + 1, 10, 1, opts.cabelo);
-          R(-6, hY + 2, 12, 6, opts.cabelo);
-          R(-5, hY + 8, 10, 1, hShadow);
-          R(-3, hY + 9, 6, 1, hShadow);
-          R(-4, hY + 2, 8, 1, hHighlight);
+          R(-6, hY + 2, 12, 7, opts.cabelo);
+          R(-5, hY + 9, 10, 1, hShadow);
+          R(-3, hY + 10, 6, 1, hShadow);
           break;
 
         case "rabo":
-          // Rabo de cavalo atrás
-          R(-3, hY, 6, 1, opts.cabelo);
-          R(-4, hY + 1, 8, 5, opts.cabelo);
-          R(-3, hY + 1, 6, 1, hHighlight);
-          // O rabo pendurado
-          R(-2, hY + 5, 4, 1, "#e2e2ee"); // Elástico
-          R(-3, hY + 6, 6, 7, opts.cabelo);
-          R(-2, hY + 13, 4, 1, hShadow);
+          // Coque base + Rabo volumoso caindo
+          R(-2, hY + 4, 4, 1, "#e2e2ee"); // Elástico
+          R(-4, hY + 5, 8, 8, opts.cabelo);
+          R(-3, hY + 13, 6, 1, hShadow);
+          R(-3, hY + 5, 2, 6, hHighlight);
           break;
 
         case "coque":
-          R(-3, hY + 2, 6, 6, opts.cabelo);
-          // Coque redondo no alto
-          R(-2, hY - 3, 4, 1, opts.cabelo);
-          R(-3, hY - 2, 6, 4, opts.cabelo);
-          R(-2, hY + 2, 4, 1, hShadow);
-          R(-2, hY - 2, 3, 1, hHighlight);
+          R(-2, hY - 6, 4, 1, opts.cabelo);
+          R(-3, hY - 5, 6, 4, opts.cabelo);
+          R(-2, hY - 2, 4, 1, hShadow);
+          R(-2, hY - 5, 3, 1, hHighlight);
           break;
 
         case "trancas":
-          R(-4, hY + 1, 8, 5, opts.cabelo);
-          R(-5, hY + 6, 3, 8, opts.cabelo); // Trança Esq
-          R(2, hY + 6, 3, 8, opts.cabelo);  // Trança Dir
-          R(-4, hY + 13, 1, 1, hShadow);
-          R(3, hY + 13, 1, 1, hShadow);
+          R(-5, hY + 5, 3, 9, opts.cabelo);
+          R(2, hY + 5, 3, 9, opts.cabelo);
+          R(-4, hY + 14, 1, 1, hShadow);
+          R(3, hY + 14, 1, 1, hShadow);
           break;
 
         case "afro":
-          R(-3, hY - 3, 6, 1, opts.cabelo);
-          R(-5, hY - 2, 10, 1, opts.cabelo);
-          R(-7, hY - 1, 14, 10, opts.cabelo);
-          R(-5, hY + 9, 10, 1, hShadow);
-          R(-3, hY + 10, 6, 1, hShadow);
-          R(-4, hY - 1, 8, 1, hHighlight);
+          R(-7, hY - 3, 14, 13, opts.cabelo);
+          R(-6, hY + 10, 12, 1, hShadow);
+          R(-4, hY + 11, 8, 1, hShadow);
+          R(-5, hY - 2, 10, 1, hHighlight);
           break;
 
-        default: // Curto/Social
-          R(-2, hY, 4, 1, opts.cabelo);
-          R(-4, hY + 1, 8, 6, opts.cabelo);
-          R(-3, hY + 7, 6, 1, hShadow);
-          R(-3, hY + 1, 6, 1, hHighlight);
+        default: // Curto / Social
+          R(-4, hY + 7, 8, 2, hShadow);
           break;
       }
       return;
     }
 
-    // QUANDO DE FRENTE OU LADO (Cabelo por trás dos ombros)
+    // QUANDO DE FRENTE OU LADO (Cabelo aparecendo por trás dos ombros)
     const isLong = style === "longo" || style === "longo_liso" || style === "ondulado" || style === "trancas" || style === "bob";
     if (isLong) {
       const hairLen = style === "bob" ? 7 : 11;
@@ -241,7 +230,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   };
   drawBackHair();
 
-  // ── 2. PERNAS E CANELAS (Sólidas sem buracos invisíveis) ──
+  // ── 2. PERNAS E CANELAS ──
   const sL = Math.max(0, legOff);
   const sR = Math.max(0, -legOff);
 
@@ -254,7 +243,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(-6, legTopY + 1, 12, 3, pB);
     R(-6, legTopY + 4, 12, 1, pD);
 
-    // Canela sólida unindo à saia e ao sapato
     R(leftX + 1, legTopY + 4 + sL, 2, footY - (legTopY + 4), sk);
     R(leftX + 1, legTopY + 4 + sL, 1, footY - (legTopY + 4), skS);
 
@@ -266,7 +254,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(leftX, legTopY + 2 + sL, legW, 1, pD);
     R(rightX, legTopY + 2 + sR, legW, 1, pD);
 
-    // Canelas expostas preenchidas completamente
     const skinStartY = legTopY + 3;
     const skinHeight = footY - skinStartY;
 
@@ -276,7 +263,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(rightX, skinStartY + sR, legW, skinHeight, sk);
     R(rightX, skinStartY + sR, 1, skinHeight, skS);
   } else {
-    // Calça contínua tocando nos sapatos
     const pantHeight = footY - legTopY;
 
     R(leftX, legTopY + sL, legW, pantHeight, pB);
@@ -295,13 +281,11 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const shoeH = shade(sapatoCor, 25);
   const boot = sapatoModelo === "bota";
 
-  // Esquerdo
   R(leftX - 1, footY - (boot ? 1 : 0) + sL, 4, 2 + (boot ? 1 : 0), shoeD);
   R(leftX, footY - (boot ? 1 : 0) + sL, 3, 1, sapatoCor);
   R(leftX, footY - (boot ? 1 : 0) + sL, 1, 1, shoeH);
   R(leftX - 1, footY + 2 + sL, 4, 1, "#121318");
 
-  // Direito
   R(rightX, footY - (boot ? 1 : 0) + sR, 4, 2 + (boot ? 1 : 0), shoeD);
   R(rightX + 1, footY - (boot ? 1 : 0) + sR, 3, 1, sapatoCor);
   R(rightX + 1, footY - (boot ? 1 : 0) + sR, 1, 1, shoeH);
@@ -325,13 +309,15 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   if (!u) {
     if (camisaModelo === "camisa") {
       R(-2, tY, 4, 1, corH);
-      R(0, tY + 1, 1, 7, corD);
-      R(0, tY + 2, 1, 1, "#ffffff");
-      R(0, tY + 5, 1, 1, "#ffffff");
+      if (dir !== "up") {
+        R(0, tY + 1, 1, 7, corD);
+        R(0, tY + 2, 1, 1, "#ffffff");
+        R(0, tY + 5, 1, 1, "#ffffff");
+      }
     } else if (camisaModelo === "jaqueta") {
       R(tX + 1, tY, 1, 8, corS);
       R(-tX - 2, tY, 1, 8, corS);
-      R(0, tY, 1, 8, "#b0b5c0");
+      if (dir !== "up") R(0, tY, 1, 8, "#b0b5c0");
     } else if (regata) {
       R(tX, tY, 2, 2, sk);
       R(-tX - 2, tY, 2, 2, sk);
@@ -341,7 +327,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(-3, tY + 1, 6, 1, shade(u.colete, 20));
   }
 
-  if (camisaImagem && !u?.colete) {
+  if (camisaImagem && !u?.colete && dir !== "up") {
     drawShirtStamp(camisaImagem, tX, tY, tW, 9);
   }
 
@@ -364,7 +350,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   // ── 6. PESCOÇO ──
   R(-1, tY - 2, 2, 2, skS);
 
-  // ── 7. CABEÇA ARREDONDADA ──
+  // ── 7. CABEÇA ──
   const hYF = hY + 1;
 
   R(-3, hYF - 1, 6, 1, skD);
@@ -377,9 +363,8 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(2, hYF + 4, 1, 1, "#e07b88");
   }
 
-  // ── 8. CABELO FRONTAL ULTRA-ARREDONDADO ──
+  // ── 8. CABELO FRONTAL ──
   if (dir !== "up") {
-    // Topo Curvo do Crânio
     R(-2, hYF - 3, 4, 1, opts.cabelo);
     R(-4, hYF - 2, 8, 1, opts.cabelo);
     R(-3, hYF - 2, 6, 1, hHighlight);
