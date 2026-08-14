@@ -55,21 +55,6 @@ export default function AvatarCanvas({
       : null;
 
     drawCharacter(ctx, VW / 2, VH - 8, {
-      cor: player.cor,                           // Cor da camiseta vinda do Admin
-      cabelo: player.cabelo,
-      cabeloEstilo: player.cabeloEstilo,
-      pele: player.pele,
-      sexo: player.sexo,
-      camisaModelo: player.camisaModelo,         // Modelo salvo
-      camisaImagem: player.camisaImagem,         // Imagem da estampa vinda do Admin
-      camisaTransform: player.camisaTransform,   // Posição/Tamanho da estampa
-      inferiorModelo: player.inferiorModelo,
-      calcaCor: player.calcaCor,
-      sapatoModelo: player.sapatoModelo,
-      sapatoCor: player.sapatoCor,
-      dir: player.dir,                           // Direção do personagem
-      anim: player.moving ? Date.now() * 0.005 : 0,
-      time: Date.now(),
       cor,
       cabelo,
       pele,
