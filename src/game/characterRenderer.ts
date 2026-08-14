@@ -35,7 +35,6 @@ export interface CharacterOpts {
   sapatoModelo?: ShoeStyle;
   sapatoCor?: string;
   camisaImagem?: string;
-  camisaTransform?: ShirtArtTransform;
   dir?: Dir;
   anim?: number;
   self?: boolean;
