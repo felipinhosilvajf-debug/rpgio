@@ -1,5 +1,6 @@
 import { useGame } from "../state/GameContext";
-import { Avatar, Btn, Card, Label, money } from "./ui";
+import { Btn, Card, Label, money } from "./ui";
+import AvatarCanvas from "./AvatarCanvas";
 import type { ClothingItem } from "../game/types";
 
 /**
@@ -32,7 +33,7 @@ export default function Wardrobe({ compact = false }: { compact?: boolean }) {
       <Card className="flex items-center gap-4 border-l-4 border-[#43dcff]">
         <div className="pixel-inset flex h-[92px] w-[76px] shrink-0 items-center justify-center bg-[#07101d]">
           {equipada ? (
-            <Avatar
+            <AvatarCanvas
               cor={equipada.cor}
               cabelo="#3a2418"
               pele={player.pele}
@@ -52,6 +53,7 @@ export default function Wardrobe({ compact = false }: { compact?: boolean }) {
             <>
               <div className="font-pixel mt-1 text-[10px] text-white">{equipada.nome}</div>
               <div className="text-[10px] text-[#7184a8]">{equipada.camisaModelo ?? "camiseta"} · {equipada.genero ?? "unissex"}</div>
+              <Btn tone="red" size="sm" className="mt-1.5" onClick={() => equipClothing(null)}>❌ Retirar roupa</Btn>
             </>
           ) : (
             <div className="mt-1 text-[11px] text-[#7184a8]">Nenhuma roupa equipada — você está com o look básico.</div>
@@ -73,7 +75,7 @@ export default function Wardrobe({ compact = false }: { compact?: boolean }) {
               return (
                 <Card key={item.id} className={`flex flex-col items-center gap-2 text-center ${equipada ? "ring-2 ring-[#43dcff] shadow-[0_0_14px_rgba(67,220,255,0.15)]" : ""}`}>
                   <div className="pixel-inset flex h-[86px] w-full items-center justify-center bg-[#0a1024]">
-                    <Avatar
+                    <AvatarCanvas
                       cor={item.cor}
                       cabelo="#3a2418"
                       pele={player.pele}

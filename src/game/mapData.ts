@@ -31,23 +31,23 @@ export interface GroundDef {
 }
 
 export const GROUND_DEFS: Record<number, GroundDef> = {
-  [G.GRASS]: { id: G.GRASS, nome: "Grama", cor: "#57a049" },
-  [G.GRASS_DARK]: { id: G.GRASS_DARK, nome: "Grama Escura", cor: "#3f7d38" },
-  [G.ROAD]: { id: G.ROAD, nome: "Asfalto", cor: "#4b505f" },
-  [G.ROAD_LINE]: { id: G.ROAD_LINE, nome: "Asfalto (faixa)", cor: "#565c6d" },
-  [G.SIDEWALK]: { id: G.SIDEWALK, nome: "Calçada", cor: "#a4abb8" },
-  [G.WATER]: { id: G.WATER, nome: "Água", cor: "#2f74b5", solid: true },
-  [G.SAND]: { id: G.SAND, nome: "Areia", cor: "#d8c48c" },
-  [G.DIRT]: { id: G.DIRT, nome: "Terra", cor: "#8c6a44" },
-  [G.WOOD]: { id: G.WOOD, nome: "Piso Madeira", cor: "#a9743f" },
-  [G.TILEFLOOR]: { id: G.TILEFLOOR, nome: "Piso Cerâmico", cor: "#c9ccd8" },
-  [G.WALL]: { id: G.WALL, nome: "Parede", cor: "#6d7280", solid: true },
-  [G.CONCRETE]: { id: G.CONCRETE, nome: "Concreto", cor: "#8d9199" },
-  [G.CARPET]: { id: G.CARPET, nome: "Carpete", cor: "#8e3b3b" },
-  [G.PLAZA]: { id: G.PLAZA, nome: "Praça", cor: "#b8b1a2" },
-  [G.FLOWERS]: { id: G.FLOWERS, nome: "Grama Florida", cor: "#5cab4d" },
-  [G.CROSSWALK]: { id: G.CROSSWALK, nome: "Faixa Pedestre", cor: "#4b505f" },
-  [G.MILFLOOR]: { id: G.MILFLOOR, nome: "Piso Militar", cor: "#7e8467" },
+  [G.GRASS]: { id: G.GRASS, nome: "Grama", cor: "#5f9c3f" },
+  [G.GRASS_DARK]: { id: G.GRASS_DARK, nome: "Grama Escura", cor: "#4a7a30" },
+  [G.ROAD]: { id: G.ROAD, nome: "Asfalto", cor: "#6b5b47" },
+  [G.ROAD_LINE]: { id: G.ROAD_LINE, nome: "Asfalto (faixa)", cor: "#77674f" },
+  [G.SIDEWALK]: { id: G.SIDEWALK, nome: "Calçada", cor: "#c2b49a" },
+  [G.WATER]: { id: G.WATER, nome: "Água", cor: "#4d9ec0", solid: true },
+  [G.SAND]: { id: G.SAND, nome: "Areia", cor: "#e0c68e" },
+  [G.DIRT]: { id: G.DIRT, nome: "Terra", cor: "#a3763f" },
+  [G.WOOD]: { id: G.WOOD, nome: "Piso Madeira", cor: "#b07a44" },
+  [G.TILEFLOOR]: { id: G.TILEFLOOR, nome: "Piso Cerâmico", cor: "#d8c9a8" },
+  [G.WALL]: { id: G.WALL, nome: "Parede", cor: "#8a7f6e", solid: true },
+  [G.CONCRETE]: { id: G.CONCRETE, nome: "Concreto", cor: "#a29a8c" },
+  [G.CARPET]: { id: G.CARPET, nome: "Carpete", cor: "#a04b3e" },
+  [G.PLAZA]: { id: G.PLAZA, nome: "Praça", cor: "#cdb896" },
+  [G.FLOWERS]: { id: G.FLOWERS, nome: "Grama Florida", cor: "#6da94e" },
+  [G.CROSSWALK]: { id: G.CROSSWALK, nome: "Faixa Pedestre", cor: "#8a7f6b" },
+  [G.MILFLOOR]: { id: G.MILFLOOR, nome: "Piso Militar", cor: "#8b8a67" },
 };
 
 /* -------------------------------- OBJECTS -------------------------------- */
@@ -323,11 +323,11 @@ function buildCity(): SceneData {
   o[42][10] = O.PLANT;
   o[42][16] = O.PLANT;
 
-  // ---- LOJA DE ROUPAS & BARBEARIA (ao lado do hospital) ----
-  rect(g, 22, 36, 9, 6, G.PLAZA);
-  building(o, 22, 36, 5, 5, { wall: O.WALL_BRICK, roof: O.ROOF_ORANGE, door: O.DOOR_CLOTHING, doorDx: 2 });
-  o[36][23] = O.SIGN;
-  o[41][23] = O.SIGN;
+  // ---- LOJA DE ROUPAS & BARBEARIA (ao lado do hospital, fora da rua) ----
+  rect(g, 17, 36, 5, 6, G.PLAZA);
+  building(o, 17, 36, 5, 5, { wall: O.WALL_BRICK, roof: O.ROOF_ORANGE, door: O.DOOR_CLOTHING, doorDx: 2 });
+  o[41][18] = O.SIGN;
+  o[41][20] = O.SIGN;
 
   // ---- PREFEITURA / CENTRAL DE EMPREGOS ----
   rect(g, 26, 36, 13, 7, G.PLAZA);
@@ -415,7 +415,7 @@ function buildCity(): SceneData {
     ground: g,
     objects: o,
     spawn: { x: 32 * TILE + 8, y: 19 * TILE + 8 },
-    sky: "#1b2b45",
+    sky: "#6ba7c8",
   };
 }
 
@@ -506,7 +506,7 @@ function buildBarracks(): SceneData {
     objects: o,
     spawn: { x: 16 * TILE + 8, y: 21 * TILE + 8 },
     exitTo: "city",
-    sky: "#141a20",
+    sky: "#2a2a1c",
   };
 }
 
@@ -560,7 +560,7 @@ function buildHouse(): SceneData {
     objects: o,
     spawn: { x: 11 * TILE + 8, y: 12 * TILE + 8 },
     exitTo: "city",
-    sky: "#1a1410",
+    sky: "#3b2c1e",
   };
 }
 
@@ -599,7 +599,7 @@ function buildClothingStore(): SceneData {
     nome: "Loja de Roupas & Barbearia",
     w, h, ground: g, objects: o,
     spawn: { x: 12 * TILE + 8, y: 15 * TILE + 8 },
-    exitTo: "city", sky: "#150f12",
+    exitTo: "city", sky: "#4a3a32",
   };
 }
 
@@ -631,7 +631,7 @@ function buildHospital(): SceneData {
     nome: "Hospital Central",
     w, h, ground: g, objects: o,
     spawn: { x: 16 * TILE + 8, y: 19 * TILE + 8 },
-    exitTo: "city", sky: "#e8eff7",
+    exitTo: "city", sky: "#e3f0f6",
   };
 }
 

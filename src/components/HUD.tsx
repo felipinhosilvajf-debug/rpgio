@@ -3,7 +3,8 @@ import { useGame } from "../state/GameContext";
 import { calcNivel, getItem, getJob, getRank, getUniform, ITEMS, JOBS } from "../game/jobs";
 import { getProperty as getPropertyDef } from "../game/mapData";
 import { calculatePatrimony } from "../game/types";
-import { Avatar, Bar, Btn, Card, Input, Label, Modal, money, BOTTOM_STYLES, CABELOS, CORES, HAIR_STYLES, PELES, SHIRT_STYLES, SHOE_STYLES } from "./ui";
+import { Bar, Btn, Card, Input, Label, Modal, money, BOTTOM_STYLES, CABELOS, CORES, HAIR_STYLES, PELES, SHIRT_STYLES, SHOE_STYLES } from "./ui";
+import AvatarCanvas from "./AvatarCanvas";
 import type { InteractTarget, PlayerData, SceneId, Sexo, ShirtArtTransform, ShirtStyle } from "../game/types";
 
 export type ModalId = null | "jobs" | "shop" | "arsenal" | "bank" | "prop" | "inv" | "settings" | "help" | "profile" | "admin";
@@ -18,7 +19,6 @@ export default function HUD({ target, scene, onOpen, onToggleEditor, editorOn, o
   const [showPlayers, setShowPlayers] = useState(false);
   if (!player) return null;
   const job = getJob(player.emprego);
-  const rank = getRank(player.emprego, player.patente);
   const lv = calcNivel(player.xp);
   const nearby = others.filter((o) => o.scene === scene);
 
@@ -30,7 +30,7 @@ export default function HUD({ target, scene, onOpen, onToggleEditor, editorOn, o
           {/* Avatar frame com brilho */}
           <div className="relative shrink-0">
             <div className="hud-inset flex h-[74px] w-[58px] items-center justify-center">
-              <Avatar cor={player.cor} cabelo={player.cabelo} cabeloEstilo={player.cabeloEstilo} pele={player.pele || "#f0c396"} sexo={player.sexo || "masculino"} camisaModelo={player.camisaModelo} inferiorModelo={player.inferiorModelo} calcaCor={player.calcaCor} sapatoModelo={player.sapatoModelo} sapatoCor={player.sapatoCor} size={44} farda={getUniform(player.emprego, player.patente, orgConfigs)} insignia={rank?.insignia} />
+              <AvatarCanvas cor={player.cor} cabelo={player.cabelo} cabeloEstilo={player.cabeloEstilo} pele={player.pele || "#f0c396"} sexo={player.sexo || "masculino"} camisaModelo={player.camisaModelo} inferiorModelo={player.inferiorModelo} calcaCor={player.calcaCor} sapatoModelo={player.sapatoModelo} sapatoCor={player.sapatoCor} camisaImagem={player.camisaImagem ?? ""} camisaTransform={player.camisaTransform} size={44} farda={getUniform(player.emprego, player.patente, orgConfigs)} />
             </div>
             <div className="absolute -bottom-1 -right-1 flex h-5 min-w-5 items-center justify-center border border-[#0a1024] bg-gradient-to-br from-[#43dcff] to-[#3178c8] px-1 font-pixel text-[7px] text-white shadow-[0_0_8px_rgba(67,220,255,0.6)]">{lv.nivel}</div>
           </div>
@@ -261,7 +261,7 @@ export function ProfileModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="flex flex-wrap gap-5 p-5">
             <div className="pixel-inset flex h-[130px] w-[104px] shrink-0 items-center justify-center bg-[#0a1024]">
-              <Avatar cor={player.cor} cabelo={player.cabelo} cabeloEstilo={player.cabeloEstilo} pele={player.pele || "#f0c396"} sexo={player.sexo || "masculino"} camisaModelo={player.camisaModelo} inferiorModelo={player.inferiorModelo} calcaCor={player.calcaCor} sapatoModelo={player.sapatoModelo} sapatoCor={player.sapatoCor} size={84} farda={getUniform(player.emprego, player.patente, orgConfigs)} insignia={rank?.insignia} />
+              <AvatarCanvas cor={player.cor} cabelo={player.cabelo} cabeloEstilo={player.cabeloEstilo} pele={player.pele || "#f0c396"} sexo={player.sexo || "masculino"} camisaModelo={player.camisaModelo} inferiorModelo={player.inferiorModelo} calcaCor={player.calcaCor} sapatoModelo={player.sapatoModelo} sapatoCor={player.sapatoCor} camisaImagem={player.camisaImagem ?? ""} camisaTransform={player.camisaTransform} size={86} farda={getUniform(player.emprego, player.patente, orgConfigs)} />
             </div>
             <div className="min-w-[220px] flex-1 space-y-1.5">
               <div className="flex items-center gap-2">
@@ -352,7 +352,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     <Modal title="Configurações" icon="⚙" accent="#3a4763" onClose={onClose} width="max-w-lg">
       <div className="space-y-4">
         <Card className="flex items-center gap-4">
-          <Avatar cor={player.cor} cabelo={player.cabelo} cabeloEstilo={player.cabeloEstilo} pele={player.pele || "#f0c396"} sexo={player.sexo || "masculino"} camisaModelo={player.camisaModelo} inferiorModelo={player.inferiorModelo} calcaCor={player.calcaCor} sapatoModelo={player.sapatoModelo} sapatoCor={player.sapatoCor} size={56} />
+          <AvatarCanvas cor={player.cor} cabelo={player.cabelo} cabeloEstilo={player.cabeloEstilo} pele={player.pele || "#f0c396"} sexo={player.sexo || "masculino"} camisaModelo={player.camisaModelo} inferiorModelo={player.inferiorModelo} calcaCor={player.calcaCor} sapatoModelo={player.sapatoModelo} sapatoCor={player.sapatoCor} camisaImagem={player.camisaImagem ?? ""} camisaTransform={player.camisaTransform} size={58} />
           <div className="flex-1 space-y-2">
             <div><Label>Nome</Label><Input value={nome} maxLength={22} onChange={(e) => setNome(e.target.value)} /></div>
             <div><Label>Data de nascimento</Label><Input type="date" value={nascimento} onChange={(e) => setNascimento(e.target.value)} /></div>
@@ -418,9 +418,9 @@ export function AdminModal({ onClose }: { onClose: () => void }) {
   const {
     player, directory, adminSetPlayer, adminBanPlayer, adminTeleportPlayer, adminSetOrgSalary,
     adminSetRecruitRank, adminSetItemPrice, properties, orgConfigs, priceOverrides, notify,
-    setLeader, adminSetUniform, economyConfig, adminSetEconomyConfig, addClothingV2, updateClothing, deleteClothing, clothingItems,
+    setLeader, adminSetUniform, economyConfig, adminSetEconomyConfig, addClothingV2, updateClothing, deleteClothing, clothingItems, wipeAllData,
   } = useGame();
-  const [tab, setTab] = useState<"players" | "orgs" | "economy" | "treasury" | "world" | "roupas">("players");
+  const [tab, setTab] = useState<"players" | "orgs" | "economy" | "treasury" | "world" | "roupas" | "sistema">("players");
   const [sel, setSel] = useState<string>("");
   const [field, setField] = useState<string>("saldoCarteira");
   const [val, setVal] = useState<string>("10000");
@@ -444,9 +444,9 @@ export function AdminModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Painel Administrativo Supremo" icon="🛡️" accent="#7a4fb5" onClose={onClose} width="max-w-5xl">
       <div className="mb-3 flex flex-wrap gap-1.5">
-        {(["players", "orgs", "economy", "treasury", "world", "roupas"] as const).map((t) => (
+        {(["players", "orgs", "economy", "treasury", "world", "roupas", "sistema"] as const).map((t) => (
           <Btn key={t} tone={tab === t ? "purple" : "slate"} size="sm" onClick={() => setTab(t)}>
-            {t === "players" ? "👥 Jogadores" : t === "orgs" ? "🏢 Organizações" : t === "economy" ? "💰 Economia/Lojas" : t === "treasury" ? "🏛 Cofre Nacional" : t === "world" ? "🌍 Mundo" : "👕 Roupas"}
+            {t === "players" ? "👥 Jogadores" : t === "orgs" ? "🏢 Organizações" : t === "economy" ? "💰 Economia/Lojas" : t === "treasury" ? "🏛 Cofre Nacional" : t === "world" ? "🌍 Mundo" : t === "roupas" ? "👕 Roupas" : "⚠️ Sistema"}
           </Btn>
         ))}
       </div>
@@ -687,6 +687,10 @@ export function AdminModal({ onClose }: { onClose: () => void }) {
           existingItems={clothingItems}
         />
       )}
+
+      {tab === "sistema" && (
+        <WipePanel wipeAllData={wipeAllData} notify={notify} />
+      )}
     </Modal>
   );
 }
@@ -875,7 +879,7 @@ function ClothingCreatorPanel({ addClothingV2, updateClothing, deleteClothing, e
         <Card className="flex flex-col items-center gap-2">
           <Label>Pré-visualização viva</Label>
           <div className="pixel-inset flex h-[210px] w-full items-center justify-center bg-[#0a1024]">
-            <Avatar cor={cor} cabelo="#3a2418" cabeloEstilo={previewSexo === "feminino" ? "longo" : "social"} pele="#f0c396" sexo={previewSexo} camisaModelo={modelo} inferiorModelo={previewSexo === "feminino" ? "saia" : "calca"} camisaImagem={design} camisaTransform={transform} size={132} />
+            <AvatarCanvas cor={cor} cabelo="#3a2418" cabeloEstilo={previewSexo === "feminino" ? "longo" : "social"} pele="#f0c396" sexo={previewSexo} camisaModelo={modelo} inferiorModelo={previewSexo === "feminino" ? "saia" : "calca"} camisaImagem={design} camisaTransform={transform} size={132} />
           </div>
           <div className="flex gap-1.5"><Btn tone={previewSexo === "masculino" ? "blue" : "slate"} size="sm" onClick={() => setPreviewSexo("masculino")}>♂</Btn><Btn tone={previewSexo === "feminino" ? "cyan" : "slate"} size="sm" onClick={() => setPreviewSexo("feminino")}>♀</Btn></div>
           <div className="text-center text-[10px] text-[#8fa3c8]">{modelo} · {genero} · {money(Number(preco))}</div>
@@ -888,6 +892,63 @@ function ClothingCreatorPanel({ addClothingV2, updateClothing, deleteClothing, e
         <div className="grid gap-1.5 sm:grid-cols-2">
           {existingItems.map((item) => <div key={item.id} className="pixel-inset flex items-center gap-2 p-2"><div className="relative h-9 w-9 border border-[#0a1024]" style={{ background: item.cor }}>{item.image && <img src={item.image} alt="" className="h-full w-full object-contain" style={{ imageRendering: "pixelated" }} />}</div><div className="min-w-0 flex-1"><div className="font-pixel text-[8px] text-white">{item.nome}</div><div className="text-[9px] text-[#8fa3c8]">{item.camisaModelo ?? "camiseta"} · {item.genero ?? "unissex"} · {money(item.preco)}</div></div><Btn tone="cyan" size="sm" onClick={() => { setEditingId(item.id); setNome(item.nome); setPreco(String(item.preco)); setCor(item.cor); setModelo(item.camisaModelo ?? "camiseta"); setGenero(item.genero ?? "unissex"); setDesign(item.image ?? ""); setTransform(item.imageTransform ?? { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 }); }}>Editar</Btn><Btn tone="red" size="sm" onClick={() => deleteClothing(item.id)}>Excluir</Btn></div>)}
         </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ⚠️ WIPE TOTAL — zera contas, saldos e todos os valores */
+function WipePanel({ wipeAllData, notify }: { wipeAllData: () => Promise<void>; notify: (msg: string, tone?: "info" | "ok" | "warn" | "bad" | "money") => void }) {
+  const [confirmText, setConfirmText] = useState("");
+  const [arming, setArming] = useState(false);
+  const [executing, setExecuting] = useState(false);
+
+  const handleWipe = async () => {
+    if (confirmText.trim().toUpperCase() !== "WIPE") {
+      notify("Digite WIPE para confirmar.", "bad");
+      return;
+    }
+    if (!arming) {
+      setArming(true);
+      notify("⚠️ Primeira confirmação recebida. Clique NOVAMENTE para executar o WIPE TOTAL.", "warn");
+      return;
+    }
+    setExecuting(true);
+    await wipeAllData();
+    setExecuting(false);
+    setArming(false);
+    setConfirmText("");
+  };
+
+  return (
+    <div className="space-y-3">
+      <Card className="border-l-4 border-[#ef5d65] space-y-3">
+        <div className="font-pixel text-[9px] text-[#ef5d65]">⚠️ WIPE TOTAL DO SERVIDOR</div>
+        <p className="text-xs leading-relaxed text-[#ffcf6b]">
+          <b>IRREVERSÍVEL.</b> Apaga <b>todas as contas de jogadores</b> (inclusive administradores), zera carteiras,
+          bancos, cartões de crédito, dívidas, transações, candidaturas, RGs registrados, chat e mensagens privadas.
+          Também libera todas as propriedades e zera o saldo do Cofre Nacional.
+        </p>
+        <div className="grid gap-2 text-[11px] text-[#c9d6ee] sm:grid-cols-2">
+          <div className="pixel-inset p-2"><b className="text-[#ef5d65]">SERÁ APAGADO/ZERADO:</b><br />users, transactions, treasury_ledger, applications, rg_registry, chat, dms, saldo do Cofre, donos de propriedades.</div>
+          <div className="pixel-inset p-2"><b className="text-[#55e294]">SERÁ MANTIDO:</b><br />roupas cadastradas, loja, preços, organizações, mapa, objetos customizados, letreiros e logs de auditoria.</div>
+        </div>
+        <p className="text-[11px] text-[#ff9a90]">
+          Após o Wipe, <b>todos os jogadores (incluindo você) precisam criar uma conta nova do zero</b> — o sistema
+          faz logout automático ao concluir.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            value={confirmText}
+            onChange={(e) => { setConfirmText(e.target.value); setArming(false); }}
+            placeholder="Digite WIPE para confirmar"
+            className="flex-1"
+          />
+          <Btn tone="red" size="lg" disabled={executing} onClick={handleWipe}>
+            {executing ? "Executando..." : arming ? "⚠️ Confirmar WIPE" : "💥 Executar WIPE"}
+          </Btn>
+        </div>
+        {arming && <div className="border-l-2 border-[#ef5d65] pl-2 text-[10px] text-[#ff9a90]">⚠️ Última confirmação! Esta ação não pode ser desfeita.</div>}
       </Card>
     </div>
   );

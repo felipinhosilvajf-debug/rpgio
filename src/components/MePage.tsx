@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useGame } from "../state/GameContext";
-import { ITEMS, JOBS, calcNivel, effectivePrice, effectiveSalary, getItem, getJob, getRank, getUniform, nextRank, prevRank } from "../game/jobs";
+import { ITEMS, JOBS, calcNivel, effectivePrice, effectiveSalary, getItem, getJob, getUniform, nextRank, prevRank } from "../game/jobs";
 import { Avatar, Bar, Btn, Card, Input, Label, money, BOTTOM_STYLES, CABELOS, CORES, HAIR_STYLES, PELES, SHIRT_STYLES, SHOE_STYLES } from "./ui";
 import { AdminModal } from "./HUD";
 import Wardrobe from "./Wardrobe";
+import AvatarCanvas from "./AvatarCanvas";
 import { calculatePatrimony } from "../game/types";
 import { PROPERTIES } from "../game/mapData";
 
@@ -70,7 +71,6 @@ function CharacterTab() {
   if (!player) return null;
   const job = getJob(player.emprego);
   const clothing = player.roupaEquipada ? clothingItems.find((c) => c.id === player.roupaEquipada) : null;
-  const rank = getRank(player.emprego, player.patente);
   const level = calcNivel(player.xp);
   const patrimony = calculatePatrimony(player, properties);
   const service = transactions.filter((t) => (t.from === player.uid || t.to === player.uid) && t.tipo === "salario").slice(0, 6);
@@ -85,7 +85,7 @@ function CharacterTab() {
       <section className="neon-panel overflow-hidden">
         <div className="flex flex-wrap gap-6 bg-gradient-to-br from-[#152642] to-[#0b1426] p-6">
           <div className="pixel-inset flex h-[154px] w-[122px] shrink-0 items-center justify-center bg-[#080d18]">
-            <Avatar
+            <AvatarCanvas
               cor={clothing?.cor ?? player.cor}
               cabelo={player.cabelo}
               cabeloEstilo={player.cabeloEstilo}
@@ -96,11 +96,10 @@ function CharacterTab() {
               calcaCor={clothing?.calcaCor ?? player.calcaCor}
               sapatoModelo={clothing?.sapatoModelo ?? player.sapatoModelo}
               sapatoCor={clothing?.sapatoCor ?? player.sapatoCor}
-              camisaImagem={clothing?.image ?? ""}
-              camisaTransform={clothing?.imageTransform}
-              size={94}
+              camisaImagem={clothing?.image ?? player.camisaImagem ?? ""}
+              camisaTransform={clothing?.imageTransform ?? player.camisaTransform}
+              size={96}
               farda={!clothing ? getUniform(player.emprego, player.patente, orgConfigs) : null}
-              insignia={rank?.insignia}
             />
           </div>
           <div className="min-w-[240px] flex-1">
@@ -342,7 +341,7 @@ function SettingsTab({ onOpenControl }: { onOpenControl: () => void }) {
         <section className="neon-panel p-5">
           <div className="grid gap-6 md:grid-cols-[180px_1fr]">
             <div className="pixel-inset flex min-h-72 items-center justify-center bg-[#07101d]">
-              <Avatar cor={player.cor} cabelo={player.cabelo} cabeloEstilo={player.cabeloEstilo} pele={player.pele} sexo={player.sexo} camisaModelo={player.camisaModelo} inferiorModelo={player.inferiorModelo} calcaCor={player.calcaCor} sapatoModelo={player.sapatoModelo} sapatoCor={player.sapatoCor} size={110} />
+              <AvatarCanvas cor={player.cor} cabelo={player.cabelo} cabeloEstilo={player.cabeloEstilo} pele={player.pele} sexo={player.sexo} camisaModelo={player.camisaModelo} inferiorModelo={player.inferiorModelo} calcaCor={player.calcaCor} sapatoModelo={player.sapatoModelo} sapatoCor={player.sapatoCor} camisaImagem={player.camisaImagem ?? ""} camisaTransform={player.camisaTransform} size={120} />
             </div>
             <div className="space-y-4">
               <div><Label>Corpo / gênero</Label><div className="grid grid-cols-2 gap-1.5">{(["masculino", "feminino"] as const).map((sexo) => <button key={sexo} onClick={() => patch(sexo === "feminino" ? { sexo, cabeloEstilo: "longo", camisaModelo: "blusa", inferiorModelo: "saia" } : { sexo, cabeloEstilo: "curto", camisaModelo: "camiseta", inferiorModelo: "calca" })} className={`pixel-btn px-2 py-2 text-[10px] ${player.sexo === sexo ? "bg-[#3f7ad6] text-white ring-1 ring-[#7ee0ff]" : "bg-[#1c2a4a] text-[#9fb0ce]"}`}>{sexo === "feminino" ? "♀ Feminino" : "♂ Masculino"}</button>)}</div></div>

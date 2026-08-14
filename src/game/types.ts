@@ -1,8 +1,10 @@
 export type SceneId = "city" | "barracks" | "house" | "clothing" | "hospital";
 export type Dir = "down" | "up" | "left" | "right";
 export type Sexo = "masculino" | "feminino";
-export type HairStyle = "curto" | "social" | "cacheado" | "moicano" | "longo" | "longo_liso" | "coque" | "rabo";
-export type ShirtStyle = "camiseta" | "camisa" | "jaqueta" | "blusa";
+export type HairStyle =
+  | "curto" | "social" | "cacheado" | "moicano" | "longo" | "longo_liso" | "coque" | "rabo"
+  | "raspado" | "franja" | "ondulado" | "afro" | "trancas" | "bob";
+export type ShirtStyle = "camiseta" | "camisa" | "jaqueta" | "blusa" | "regata";
 export type BottomStyle = "calca" | "bermuda" | "shorts" | "saia";
 export type ShoeStyle = "tenis" | "social" | "bota";
 
@@ -66,6 +68,8 @@ export interface PlayerData {
   calcaCor: string;
   sapatoModelo: ShoeStyle;
   sapatoCor: string;
+  camisaImagem?: string;
+  camisaTransform?: ShirtArtTransform;
   scene: SceneId;
   x: number;
   y: number;

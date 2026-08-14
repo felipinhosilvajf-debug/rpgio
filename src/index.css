@@ -10,7 +10,7 @@ body,
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #0a0f1c;
+  background: #1a130c;
   font-family: "Rubik", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -28,13 +28,13 @@ canvas {
 
 /* ---------- Habbo-ish pixel UI ---------- */
 .pixel-panel {
-  background: linear-gradient(180deg, #1c2a4a 0%, #151f38 100%);
-  border: 3px solid #0a1024;
+  background: linear-gradient(180deg, #3a2a1c 0%, #241a10 100%);
+  border: 3px solid #171009;
   box-shadow:
-    inset 0 0 0 2px #2f4675,
-    inset 0 3px 0 0 #46639e,
+    inset 0 0 0 2px #5b4630,
+    inset 0 3px 0 0 #6f5840,
     0 6px 0 0 rgba(0, 0, 0, 0.45),
-    0 12px 30px rgba(0, 0, 0, 0.55);
+    0 12px 30px rgba(0, 0, 0, 0.5);
 }
 
 .pixel-btn {
@@ -63,8 +63,8 @@ canvas {
 }
 
 .pixel-inset {
-  background: #0c1428;
-  border: 2px solid #060a16;
+  background: #1d130c;
+  border: 2px solid #0e0905;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
@@ -169,14 +169,14 @@ canvas {
 
 /* ---------- DESIGN SYSTEM PREMIUM (PIXEL ART) ---------- */
 :root {
-  --hud-bg: linear-gradient(180deg, #16233f 0%, #0d1727 100%);
-  --hud-border: #263b60;
-  --hud-glow: rgba(67, 220, 255, 0.35);
-  --accent-cyan: #43dcff;
-  --accent-gold: #ffd65a;
-  --accent-army: #7ba548;
-  --accent-danger: #ef5d65;
-  --accent-ok: #55e294;
+  --hud-bg: linear-gradient(180deg, #2f2318 0%, #1c150e 100%);
+  --hud-border: #5b4630;
+  --hud-glow: rgba(232, 176, 75, 0.3);
+  --accent-cyan: #6db5d6;
+  --accent-gold: #e8b04b;
+  --accent-army: #6aa84f;
+  --accent-danger: #c85a4a;
+  --accent-ok: #5aa864;
   --shadow-drop: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
@@ -186,13 +186,13 @@ canvas {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     var(--shadow-drop),
-    0 0 14px rgba(67, 220, 255, 0.06);
+    0 0 14px rgba(232, 176, 75, 0.06);
   border-radius: 2px;
 }
 
 .hud-inset {
-  background: #06111e;
-  border: 1px solid #0a1a2b;
+  background: #14100a;
+  border: 1px solid #2a1f13;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.55);
 }
 
@@ -273,33 +273,33 @@ canvas {
   pointer-events: none;
   background:
     radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.35) 100%),
-    linear-gradient(180deg, rgba(97, 149, 214, 0.06) 0%, rgba(0, 0, 0, 0) 40%);
+    linear-gradient(180deg, rgba(232, 176, 75, 0.08) 0%, rgba(0, 0, 0, 0) 40%);
 }
 
 .neon-panel {
-  background: linear-gradient(145deg, rgba(18, 29, 50, 0.96), rgba(8, 14, 27, 0.98));
-  border: 1px solid #263b60;
+  background: linear-gradient(145deg, rgba(46, 34, 24, 0.96), rgba(24, 17, 11, 0.98));
+  border: 1px solid #5b4630;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 14px 40px rgba(0, 0, 0, 0.28),
-    0 0 22px rgba(67, 220, 255, 0.035);
+    0 0 22px rgba(232, 176, 75, 0.04);
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .neon-panel:hover {
-  border-color: #365983;
+  border-color: #6f5840;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 14px 40px rgba(0, 0, 0, 0.32),
-    0 0 28px rgba(67, 220, 255, 0.07);
+    0 0 28px rgba(232, 176, 75, 0.07);
 }
 
 .portal-shell {
   position: relative;
   background-image:
-    linear-gradient(rgba(55, 91, 132, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(55, 91, 132, 0.035) 1px, transparent 1px),
-    radial-gradient(circle at 50% -20%, #183b61 0%, #070b14 45%);
+    linear-gradient(rgba(111, 88, 64, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(111, 88, 64, 0.04) 1px, transparent 1px),
+    radial-gradient(circle at 50% -20%, #4a3523 0%, #1a130c 45%);
   background-size: 32px 32px, 32px 32px, 100% 100%;
 }
 
