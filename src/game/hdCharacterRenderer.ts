@@ -12,8 +12,9 @@ import type { CharacterOpts } from "./characterRenderer";
  * - The implementation focuses on a deterministic pixel pipeline using an offscreen canvas.
  */
 
-const DEFAULT_W = 128;
-const DEFAULT_H = 256;
+// Upgraded base resolution for better detail
+const DEFAULT_W = 256;
+const DEFAULT_H = 512;
 
 const clamp = (v: number, a = 0, b = 255) => Math.max(a, Math.min(b, v));
 
@@ -44,12 +45,12 @@ function lerpColor(a: string, b: string, t: number) {
 }
 
 function generatePalette(baseHex: string) {
-  // produce 5 levels: highlight, base, mid, shadow, deep
+  // produce more levels for richer shading
   return {
-    high: shade(baseHex, 30),
+    high: shade(baseHex, 40),
     base: baseHex,
-    mid: shade(baseHex, -12),
-    shadow: shade(baseHex, -35),
+    mid: shade(baseHex, -10),
+    shadow: shade(baseHex, -30),
     deep: shade(baseHex, -60),
   };
 }
@@ -62,7 +63,7 @@ function irisFromHair(hair: string) {
 }
 
 // Simple helper primitives: draw in logical pixels (1x1). The offscreen context is 1 unit per pixel.
-function makeDrawer(octx: CanvasRenderingContext2D, scale = 1) {
+function makeDrawer(octx: CanvasRenderingContext2D) {
   octx.imageSmoothingEnabled = false;
   return {
     px: (x: number, y: number, c: string) => {
@@ -96,7 +97,6 @@ function makeDrawer(octx: CanvasRenderingContext2D, scale = 1) {
 }
 
 export async function drawHDCharacter(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
-  // Respect provided options but use sensible defaults
   const baseW = DEFAULT_W;
   const baseH = DEFAULT_H;
 
@@ -120,7 +120,7 @@ export async function drawHDCharacter(ctx: CanvasRenderingContext2D, x: number, 
 
   // Define a logical center where the character will be drawn
   const cx = Math.floor(baseW / 2);
-  const groundY = Math.floor(baseH * 0.85);
+  const groundY = Math.floor(baseH * 0.86);
 
   // Palettes
   const bodyPal = generatePalette(pele);
@@ -128,187 +128,153 @@ export async function drawHDCharacter(ctx: CanvasRenderingContext2D, x: number, 
   const clothPal = generatePalette(cor);
   const iris = irisFromHair(cabelo);
 
-  // Simple scale for features (in logical pixels) chosen to give density
-  // The proportions are tuned for a full-body portrait in the canvas
-  const headW = 32;
-  const headH = 32;
-  const torsoW = 48;
-  const torsoH = 60;
-  const legH = 60;
-  const footH = 10;
+  // Proportions tuned for 256x512
+  const headW = 64;
+  const headH = 64;
+  const torsoW = 96;
+  const torsoH = 120;
+  const legH = 120;
+  const footH = 20;
 
   // Helpers for relative drawing
-  const left = (dx: number) => cx + dx;
-  const top = (dy: number) => groundY - (legH + torsoH + headH) + dy;
+  const torsoX = cx - Math.floor(torsoW / 2);
+  const torsoTop = groundY - footH - legH - torsoH + 44;
 
-  // 0. Ground shadow (soft but pixelated)
-  for (let i = -18; i <= 18; i++) D.px(cx + i, groundY + 1, 'rgba(0,0,0,0.35)');
-  for (let i = -14; i <= 14; i += 2) D.px(cx + i, groundY + 2, 'rgba(0,0,0,0.18)');
+  // 0. Ground shadow (pixelated ellipse)
+  for (let i = -40; i <= 40; i++) D.px(cx + i, groundY + 2, 'rgba(0,0,0,0.30)');
+  for (let i = -32; i <= 32; i += 2) D.px(cx + i, groundY + 6, 'rgba(0,0,0,0.16)');
 
   // 1. Legs & pants/shorts
-  const legX = cx - 12;
-  const rightLegX = cx + 6;
-  // pants body color
-  for (let lx = 0; lx < 6; lx++) {
+  const legX = cx - 24;
+  const rightLegX = cx + 12;
+  const legW = 12;
+  for (let lx = 0; lx < legW; lx++) {
     for (let ly = 0; ly < legH; ly++) {
-      // left leg
       D.px(legX + lx, groundY - footH - ly, clothPal.base);
-      // right leg
       D.px(rightLegX + lx, groundY - footH - ly, clothPal.base);
     }
   }
-  // pant highlights and shadows (simple border)
+  // pant shading
   for (let ly = 0; ly < legH; ly++) {
     D.px(legX, groundY - footH - ly, clothPal.high);
-    D.px(rightLegX + 5, groundY - footH - ly, clothPal.shadow);
+    D.px(rightLegX + legW - 1, groundY - footH - ly, clothPal.shadow);
   }
 
   // 2. Shoes
-  for (let sx = 0; sx < 8; sx++) {
-    for (let sy = 0; sy < 4; sy++) {
-      D.px(legX - 2 + sx, groundY - footH + sy, shade('#333333', -10));
-      D.px(rightLegX - 2 + sx, groundY - footH + sy, shade('#333333', -10));
+  for (let sx = 0; sx < 16; sx++) {
+    for (let sy = 0; sy < 8; sy++) {
+      D.px(legX - 4 + sx, groundY - footH + sy, shade('#333333', -12));
+      D.px(rightLegX - 4 + sx, groundY - footH + sy, shade('#333333', -12));
     }
   }
-  D.hline(legX - 2, groundY - 1, 12, '#121318');
+  D.hline(legX - 4, groundY - 2, 40, '#0f1113');
 
   // 3. Torso / Shirt
-  const torsoX = cx - Math.floor(torsoW / 2);
-  const torsoTop = groundY - footH - legH - torsoH + 28; // slightly adjusted
   for (let tx = 0; tx < torsoW; tx++) {
     for (let ty = 0; ty < torsoH; ty++) {
-      // simple rounded-ish silhouette: skip corners
-      const skip = (tx < 2 && ty < 2) || (tx > torsoW - 3 && ty < 2);
+      const skip = (tx < 4 && ty < 4) || (tx > torsoW - 5 && ty < 4);
       if (!skip) D.px(torsoX + tx, torsoTop + ty, clothPal.base);
     }
   }
-  // Shirt details: chest highlight and hem
-  D.hline(torsoX + 6, torsoTop + 6, torsoW - 12, clothPal.high);
-  D.hline(torsoX + 4, torsoTop + torsoH - 6, torsoW - 8, clothPal.shadow);
+  D.hline(torsoX + 10, torsoTop + 12, torsoW - 20, clothPal.high);
+  D.hline(torsoX + 8, torsoTop + torsoH - 12, torsoW - 16, clothPal.shadow);
 
-  // If camisaImagem provided, try stamping it (we draw it centered in torso box)
+  // stamp camisaImagem if present (async load)
   if (camisaImagem) {
     try {
       const img = new Image();
+      img.crossOrigin = 'anonymous';
       img.src = camisaImagem;
       img.onload = () => {
-        // draw scaled to torso region using nearest neighbor
         octx.imageSmoothingEnabled = false;
-        octx.drawImage(img, torsoX, torsoTop + 6, torsoW, Math.max(24, torsoH - 20));
+        octx.drawImage(img, torsoX + 6, torsoTop + 18, torsoW - 12, Math.max(48, torsoH - 48));
       };
-    } catch (e) {
-      // ignore if cannot load
-    }
+    } catch (e) { /* ignore */ }
   }
 
-  // 4. Arms and hands (with fingers separated as pixels)
-  const armW = 7;
-  const armTop = torsoTop + 8;
+  // 4. Arms and hands
+  const armW = 14;
+  const armTop = torsoTop + 20;
   // left arm
   for (let ax = 0; ax < armW; ax++) {
-    for (let ay = 0; ay < 14; ay++) {
-      D.px(torsoX - armW + ax, armTop + ay, clothPal.base);
-    }
+    for (let ay = 0; ay < 32; ay++) D.px(torsoX - armW + ax, armTop + ay, clothPal.base);
   }
-  // left hand (fingers)
-  D.px(torsoX - armW - 1, armTop + 14, bodyPal.base);
-  D.px(torsoX - armW, armTop + 14, bodyPal.base);
-  D.px(torsoX - armW + 1, armTop + 14, bodyPal.base);
+  // left hand (fingers simplified but legible)
+  for (let fx = 0; fx < 6; fx++) D.px(torsoX - armW - 2 + fx, armTop + 34, bodyPal.base);
 
   // right arm
   for (let ax = 0; ax < armW; ax++) {
-    for (let ay = 0; ay < 14; ay++) {
-      D.px(torsoX + torsoW - 1 + ax, armTop + ay, clothPal.base);
-    }
+    for (let ay = 0; ay < 32; ay++) D.px(torsoX + torsoW - 1 + ax, armTop + ay, clothPal.base);
   }
-  // right hand
-  D.px(torsoX + torsoW + armW - 1, armTop + 14, bodyPal.base);
-  D.px(torsoX + torsoW + armW - 2, armTop + 14, bodyPal.base);
+  for (let fx = 0; fx < 6; fx++) D.px(torsoX + torsoW + armW - 2 - fx, armTop + 34, bodyPal.base);
 
   // 5. Neck
-  D.rect(cx - 3, torsoTop - 4, 6, 4, bodyPal.mid);
+  D.rect(cx - 6, torsoTop - 8, 12, 6, bodyPal.mid);
 
   // 6. Head base
   const headX = cx - Math.floor(headW / 2);
   const headY = torsoTop - headH;
-  // head rectangle with a small rounded top
   for (let hx = 0; hx < headW; hx++) {
     for (let hy = 0; hy < headH; hy++) {
-      // round corners to give natural face shape
       const rx = hx - headW / 2;
-      const ry = hy - 4;
+      const ry = hy - 6;
       const round = Math.sqrt((rx * rx) / ((headW / 2) ** 2) + (ry * ry) / ((headH / 1.6) ** 2));
       if (round < 1.05) D.px(headX + hx, headY + hy, bodyPal.base);
     }
   }
-  // subtle head shading
   for (let i = 0; i < headW; i++) D.px(headX + i, headY, bodyPal.high);
   for (let i = 0; i < headW; i++) D.px(headX + i, headY + headH - 1, bodyPal.shadow);
 
-  // 7. Hair (back volume + front fringe/highlight)
-  const hairBackY = headY + 2;
-  // back volume
-  for (let hx = -4; hx <= headW + 2; hx++) {
-    for (let hy = 0; hy < 10; hy++) {
-      // only fill where it looks like hair should extend
-      if (Math.abs(hx - headW / 2) < (headW / 2 + 2) - hy / 2) {
+  // 7. Hair (back volume + front fringe/highlight) — more organic fill
+  const hairBackY = headY + 6;
+  for (let hx = -8; hx <= headW + 8; hx++) {
+    for (let hy = 0; hy < 20; hy++) {
+      if (Math.abs(hx - headW / 2) < (headW / 2 + 8) - hy / 1.6) {
         D.px(headX + Math.floor(hx), hairBackY + hy, hairPal.base);
       }
     }
   }
-  // hair highlights
-  for (let i = 0; i < 6; i++) D.px(headX + 6 + i, hairBackY + 2 + i % 2, hairPal.high);
+  // highlights
+  for (let i = 0; i < 12; i++) D.px(headX + 10 + i, hairBackY + 4 + (i % 3 === 0 ? 0 : 1), hairPal.high);
+  // fringe
+  for (let fx = 10; fx < headW - 10; fx += 2) D.px(headX + fx, headY + 18, hairPal.base);
 
-  // front fringe
-  for (let fx = 6; fx < headW - 6; fx++) D.px(headX + fx, headY + 6, hairPal.base);
-  // small stray strands
-  D.px(headX + 4, headY + 8, hairPal.shadow);
-  D.px(headX + headW - 5, headY + 8, hairPal.shadow);
-
-  // 8. Face details: eyes, nose, mouth
-  const eyeY = headY + 10;
-  const leftEyeX = cx - 6;
-  const rightEyeX = cx + 5;
-  // whites
-  D.rect(leftEyeX - 1, eyeY, 3, 2, '#ffffff');
-  D.rect(rightEyeX - 1, eyeY, 3, 2, '#ffffff');
-  // iris
-  D.rect(leftEyeX, eyeY, 1, 2, iris);
-  D.rect(rightEyeX, eyeY, 1, 2, iris);
-  // pupils (small)
-  D.px(leftEyeX, eyeY + 1, '#11141c');
-  D.px(rightEyeX, eyeY + 1, '#11141c');
+  // 8. Face details: eyes, nose, mouth — larger, more expressive
+  const eyeY = headY + 22;
+  const leftEyeX = cx - 12;
+  const rightEyeX = cx + 9;
+  // white area
+  for (let ex = 0; ex < 5; ex++) D.px(leftEyeX - 2 + ex, eyeY, '#ffffff');
+  for (let ex = 0; ex < 5; ex++) D.px(rightEyeX - 2 + ex, eyeY, '#ffffff');
+  // iris (2x2)
+  D.rect(leftEyeX, eyeY, 2, 2, iris);
+  D.rect(rightEyeX, eyeY, 2, 2, iris);
+  // pupils
+  D.px(leftEyeX + 1, eyeY + 1, '#0c0f12');
+  D.px(rightEyeX + 1, eyeY + 1, '#0c0f12');
   // brows
-  D.hline(leftEyeX - 1, eyeY - 2, 3, hairPal.shadow);
-  D.hline(rightEyeX - 1, eyeY - 2, 3, hairPal.shadow);
-  // nose (subtle)
-  D.px(cx, eyeY + 3, bodyPal.mid);
+  D.hline(leftEyeX - 2, eyeY - 4, 7, hairPal.shadow);
+  D.hline(rightEyeX - 2, eyeY - 4, 7, hairPal.shadow);
+  // nose shading
+  D.px(cx, eyeY + 8, bodyPal.mid);
   // mouth
-  D.hline(cx - 1, eyeY + 6, 3, isFem ? '#d06874' : bodyPal.shadow);
+  D.hline(cx - 4, eyeY + 14, 8, isFem ? '#d06874' : bodyPal.shadow);
 
-  // 9. Minor facial features (cheeks)
+  // 9. Cheeks for gender nuance
   if (isFem) {
-    D.px(cx - 4, eyeY + 4, '#f0b0b7');
-    D.px(cx + 4, eyeY + 4, '#f0b0b7');
+    D.px(cx - 10, eyeY + 6, '#f0b0b7');
+    D.px(cx + 10, eyeY + 6, '#f0b0b7');
   }
 
-  // 10. Accessories (placeholder - respects opts.uniform, capo, etc. could be expanded)
-  // If uniform coleto exists, draw a vest-like rectangle on top
+  // 10. Accessories: simple vest/colete
   if ((opts.uniforme as any)?.colete) {
     const ucol = (opts.uniforme as any).colete as string;
-    D.rect(torsoX + 6, torsoTop + 6, torsoW - 12, torsoH - 20, ucol);
-    D.hline(torsoX + 6, torsoTop + 6, torsoW - 12, shade(ucol, 18));
+    D.rect(torsoX + 12, torsoTop + 12, torsoW - 24, torsoH - 40, ucol);
+    D.hline(torsoX + 12, torsoTop + 12, torsoW - 24, shade(ucol, 12));
   }
 
-  // DONE drawing logical pixels in offscreen canvas.
-  // Composite to destination canvas with nearest-neighbor scaling.
-  const scaleX = Math.max(1, Math.floor((ctx.canvas.width / baseW) || 1));
-  const scaleY = Math.max(1, Math.floor((ctx.canvas.height / baseH) || 1));
-  // We choose to draw at 1:1 logical pixels onto the destination, and let caller scale as needed.
-
-  // Draw offscreen canvas onto ctx at requested (x,y) with imageSmoothing disabled.
+  // Draw completed offscreen canvas to destination with nearest neighbor
   ctx.imageSmoothingEnabled = false;
-  // The user expects x,y to be the center-bottom anchor similar to legacy renderer.
   const drawX = Math.floor(x - baseW / 2);
   const drawY = Math.floor(y - baseH / 2);
   ctx.drawImage(off, drawX, drawY, baseW, baseH);
