@@ -43,9 +43,8 @@ export interface CharacterOpts {
 }
 
 /**
- * Renderizador de Avatar Pixel Art.
- * - Correção do cabelo de costas (cobertura total do crânio sem calvície).
- * - Cabelos arredondados e caimento proporcional nas costas.
+ * Renderizador Pixel Art corrigido.
+ * Renderização em duas camadas do cabelo de costas para evitar que a pele da cabeça se sobreponha.
  */
 export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
   const pele = opts.pele ?? "#f0c396";
@@ -131,109 +130,48 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
 
   const hY = -28 + breathY;
 
-  // ── 1. CABELO TRASEIRO E CAMADAS DE COSTAS ──
-  const drawBackHair = () => {
-    const style = cabeloEstilo;
-
-    // QUANDO DE COSTAS (dir === "up")
-    if (dir === "up") {
-      // COBERTURA COMPLETA DA CABEÇA (Evita o efeito careca)
-      R(-2, hY - 3, 4, 1, opts.cabelo);
-      R(-4, hY - 2, 8, 1, opts.cabelo);
-      R(-5, hY - 1, 10, 10, opts.cabelo);
-      R(-4, hY - 2, 8, 1, hHighlight);
-
-      switch (style) {
-        case "longo":
-        case "longo_liso":
-        case "ondulado":
-          // Caimento volumoso pelas costas até a cintura
-          R(-6, hY + 2, 12, 11, opts.cabelo);
-          R(-5, hY + 13, 10, 2, opts.cabelo);
-          R(-3, hY + 15, 6, 1, hShadow);
-          // Sombreamentos
-          R(-6, hY + 3, 1, 10, hShadow);
-          R(5, hY + 3, 1, 10, hShadow);
-          R(-4, hY + 1, 8, 2, hHighlight);
-          break;
-
-        case "bob":
-          R(-6, hY + 2, 12, 7, opts.cabelo);
-          R(-5, hY + 9, 10, 1, hShadow);
-          R(-3, hY + 10, 6, 1, hShadow);
-          break;
-
-        case "rabo":
-          // Coque base + Rabo volumoso caindo
-          R(-2, hY + 4, 4, 1, "#e2e2ee"); // Elástico
-          R(-4, hY + 5, 8, 8, opts.cabelo);
-          R(-3, hY + 13, 6, 1, hShadow);
-          R(-3, hY + 5, 2, 6, hHighlight);
-          break;
-
-        case "coque":
-          R(-2, hY - 6, 4, 1, opts.cabelo);
-          R(-3, hY - 5, 6, 4, opts.cabelo);
-          R(-2, hY - 2, 4, 1, hShadow);
-          R(-2, hY - 5, 3, 1, hHighlight);
-          break;
-
-        case "trancas":
-          R(-5, hY + 5, 3, 9, opts.cabelo);
-          R(2, hY + 5, 3, 9, opts.cabelo);
-          R(-4, hY + 14, 1, 1, hShadow);
-          R(3, hY + 14, 1, 1, hShadow);
-          break;
-
-        case "afro":
-          R(-7, hY - 3, 14, 13, opts.cabelo);
-          R(-6, hY + 10, 12, 1, hShadow);
-          R(-4, hY + 11, 8, 1, hShadow);
-          R(-5, hY - 2, 10, 1, hHighlight);
-          break;
-
-        default: // Curto / Social
-          R(-4, hY + 7, 8, 2, hShadow);
-          break;
-      }
-      return;
-    }
-
-    // QUANDO DE FRENTE OU LADO (Cabelo aparecendo por trás dos ombros)
-    const isLong = style === "longo" || style === "longo_liso" || style === "ondulado" || style === "trancas" || style === "bob";
+  // ── 1. CABELO DE COSTAS (CAMADA INFERIOR / LONGO ATRÁS DAS COSTAS) ──
+  if (dir === "up") {
+    const isLong = cabeloEstilo === "longo" || cabeloEstilo === "longo_liso" || cabeloEstilo === "ondulado";
     if (isLong) {
-      const hairLen = style === "bob" ? 7 : 11;
+      R(-6, hY + 3, 12, 11, opts.cabelo);
+      R(-5, hY + 14, 10, 2, opts.cabelo);
+      R(-3, hY + 16, 6, 1, hShadow);
+      R(-6, hY + 4, 1, 10, hShadow);
+      R(5, hY + 4, 1, 10, hShadow);
+    } else if (cabeloEstilo === "bob") {
+      R(-6, hY + 3, 12, 7, opts.cabelo);
+      R(-5, hY + 10, 10, 1, hShadow);
+    } else if (cabeloEstilo === "trancas") {
+      R(-5, hY + 6, 3, 9, opts.cabelo);
+      R(2, hY + 6, 3, 9, opts.cabelo);
+    }
+  } else {
+    // Cabelo aparecendo de frente pelos ombros
+    const isLong = cabeloEstilo === "longo" || cabeloEstilo === "longo_liso" || cabeloEstilo === "ondulado" || cabeloEstilo === "trancas" || cabeloEstilo === "bob";
+    if (isLong) {
+      const hairLen = cabeloEstilo === "bob" ? 7 : 11;
       const vol = isFem ? 2 : 0;
 
-      // Mecha Esquerda
       R(-5 - vol, hY + 3, 3 + vol, 1, opts.cabelo);
       R(-6 - vol, hY + 4, 4 + vol, hairLen - 2, opts.cabelo);
       R(-5 - vol, hY + 3 + hairLen - 2, 3 + vol, 1, hShadow);
-      R(-4 - vol, hY + 3 + hairLen - 1, 2 + vol, 1, hShadow);
-      R(-5 - vol, hY + 4, 1, hairLen - 3, hHighlight);
 
-      // Mecha Direita
       R(2, hY + 3, 3 + vol, 1, opts.cabelo);
       R(2, hY + 4, 4 + vol, hairLen - 2, opts.cabelo);
       R(2, hY + 3 + hairLen - 2, 3 + vol, 1, hShadow);
-      R(2, hY + 3 + hairLen - 1, 2 + vol, 1, hShadow);
-      R(4 + vol, hY + 4, 1, hairLen - 3, hHighlight);
     }
 
-    if (style === "rabo") {
+    if (cabeloEstilo === "rabo") {
       R(3, hY + 2, 3, 1, opts.cabelo);
       R(3, hY + 3, 5, 6, opts.cabelo);
       R(4, hY + 9, 3, 2, hShadow);
-      R(3, hY + 3, 1, 5, hHighlight);
-      R(3, hY + 3, 3, 1, "#e2e2ee");
     }
-  };
-  drawBackHair();
+  }
 
   // ── 2. PERNAS E CANELAS ──
   const sL = Math.max(0, legOff);
   const sR = Math.max(0, -legOff);
-
   const leftX = -4;
   const rightX = 1;
   const legW = 3;
@@ -350,7 +288,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   // ── 6. PESCOÇO ──
   R(-1, tY - 2, 2, 2, skS);
 
-  // ── 7. CABEÇA ──
+  // ── 7. CABEÇA (BASE DE PELE) ──
   const hYF = hY + 1;
 
   R(-3, hYF - 1, 6, 1, skD);
@@ -363,8 +301,36 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(2, hYF + 4, 1, 1, "#e07b88");
   }
 
-  // ── 8. CABELO FRONTAL ──
-  if (dir !== "up") {
+  // ── 8. CABELO (CAMADA SUPERIOR / COBRE A CABEÇA COSTA E FRENTE) ──
+  if (dir === "up") {
+    // 💥 AQUI FICA A COBERTURA DO CRÂNIO QUANDO DE COSTAS (COBRE A PELE) 💥
+    R(-3, hYF - 3, 6, 1, opts.cabelo);
+    R(-5, hYF - 2, 10, 2, opts.cabelo);
+    R(-5, hYF, 10, 8, opts.cabelo); // Cobre toda a nuca e partes laterais
+    R(-4, hYF - 2, 8, 1, hHighlight);
+    R(-4, hYF + 7, 8, 1, hShadow);
+
+    // Detalhes extras do estilo visto de costas
+    switch (cabeloEstilo) {
+      case "rabo":
+        R(-2, hYF + 2, 4, 1, "#e2e2ee"); // Elástico
+        R(-4, hYF + 3, 8, 8, opts.cabelo);
+        R(-3, hYF + 11, 6, 1, hShadow);
+        break;
+
+      case "coque":
+        R(-2, hYF - 6, 4, 1, opts.cabelo);
+        R(-3, hYF - 5, 6, 3, opts.cabelo);
+        R(-2, hYF - 3, 4, 1, hShadow);
+        break;
+
+      case "afro":
+        R(-7, hYF - 4, 14, 12, opts.cabelo);
+        R(-6, hYF + 8, 12, 1, hShadow);
+        break;
+    }
+  } else {
+    // Topo e frente do cabelo nas direções normais (frente/lados)
     R(-2, hYF - 3, 4, 1, opts.cabelo);
     R(-4, hYF - 2, 8, 1, opts.cabelo);
     R(-3, hYF - 2, 6, 1, hHighlight);
@@ -390,9 +356,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
         R(2, hYF + 1, 3, 2, opts.cabelo);
         R(3, hYF + 3, 3, 3, opts.cabelo);
         R(3, hYF + 6, 2, 1, hShadow);
-
-        R(-4, hYF + 1, 1, 3, hHighlight);
-        R(3, hYF + 1, 1, 3, hHighlight);
         break;
 
       case "bob":
@@ -406,7 +369,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
         R(-2, hYF - 6, 4, 1, opts.cabelo);
         R(-3, hYF - 5, 6, 3, opts.cabelo);
         R(-2, hYF - 3, 4, 1, hShadow);
-        R(-2, hYF - 5, 3, 1, hHighlight);
         break;
 
       case "afro":
@@ -414,8 +376,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
         R(-7, hYF - 3, 14, 2, opts.cabelo);
         R(-8, hYF - 1, 16, 6, opts.cabelo);
         R(-7, hYF + 5, 14, 1, hShadow);
-        R(-5, hYF + 6, 10, 1, hShadow);
-        R(-6, hYF - 3, 12, 1, hHighlight);
         break;
 
       default:
