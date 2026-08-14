@@ -6,7 +6,7 @@ import {
   signInWithEmailAndPassword, signOut, updateProfile,
 } from "firebase/auth";
 import {
-  addDoc, collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy,
   query, runTransaction, serverTimestamp, setDoc, updateDoc, where,
 } from "firebase/firestore";
 import { COL, auth, db, firebaseReady } from "../firebase";
@@ -119,6 +119,7 @@ interface GameCtxValue {
   addClothingV2: (data: { nome: string; preco: number; cor: string; camisaModelo?: ShirtStyle; genero?: Sexo | "unissex"; image?: string; imageTransform?: ShirtArtTransform }) => Promise<void>;
   updateClothing: (id: string, data: Partial<ClothingItem>) => Promise<void>;
   deleteClothing: (id: string) => Promise<void>;
+  wipeAllData: () => Promise<void>;
   buyClothing: (id: string, useCredit?: boolean) => void;
   equipClothing: (id: string) => void;
   adminSetDebt: (uid: string, campo: string, valor: number) => Promise<void>;
@@ -1216,6 +1217,75 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [notify, logAdmin]);
 
+  /**
+   * WIPE TOTAL DO SERVIDOR (apenas Admin):
+   * - Apaga TODOS os jogadores (docs de `users`) → todos, inclusive admins,
+   *   criam conta do zero no próximo login (novo RG, novos saldos).
+   * - Apaga transações, ledger do Cofre, candidaturas, RG registry, chat e DMs.
+   * - Reseta o saldo do Cofre Nacional para 0.
+   * - Libera todas as propriedades (sem dono).
+   * - Mantém conteúdo: roupas, loja, organizações, mapa, objetos, letreiros.
+   */
+  const wipeAllData = useCallback(async () => {
+    const p = playerRef.current;
+    if (!p || !p.isAdmin) return notify("Sem permissão.", "bad");
+    if (!db || offlineRef.current) return notify("Wipe disponível apenas com Firestore conectado.", "bad");
+
+    const deleteAllIn = async (name: string) => {
+      try {
+        const snap = await getDocs(query(collection(db!, name)));
+        const refs = snap.docs.map((d) => d.ref);
+        for (let i = 0; i < refs.length; i += 20) {
+          await Promise.all(refs.slice(i, i + 20).map((r) => deleteDoc(r).catch(() => undefined)));
+        }
+      } catch { /* ignore */ }
+    };
+
+    notify("⏳ Wipe total iniciado... Apagando contas e saldos.", "warn");
+    try {
+      // 1. Apagar todos os jogadores (contas)
+      await deleteAllIn(COL.users);
+      // 2. Dados econômicos e temporários
+      await Promise.all([
+        deleteAllIn(COL.transactions),
+        deleteAllIn(COL.treasuryLedger),
+        deleteAllIn(COL.applications),
+        deleteAllIn(COL.rgRegistry),
+        deleteAllIn(COL.chat),
+        deleteAllIn(COL.dms),
+      ]);
+      // 3. Liberar propriedades (sem dono)
+      const propSnap = await getDocs(query(collection(db, COL.properties))).catch(() => null);
+      if (propSnap) {
+        for (const d of propSnap.docs) {
+          await setDoc(d.ref, { ownerUid: null, ownerNome: null, boughtAt: null, locked: false }, { merge: true }).catch(() => undefined);
+        }
+      }
+      // 4. Zerar Cofre Nacional
+      await setDoc(doc(db, COL.treasury, "national"), { saldo: 0, updatedAt: Date.now() }, { merge: true }).catch(() => undefined);
+
+      // 5. Registro do wipe (auditoria — mantém adminLogs)
+      await addDoc(collection(db, COL.adminLogs), {
+        adminId: p.uid, adminNome: p.nome, action: "WIPE_TOTAL", target: "SERVER",
+        data: { mensagem: "Todas as contas e saldos foram apagados. Todos precisam criar conta do zero." },
+        timestamp: Date.now(),
+      }).catch(() => undefined);
+
+      // 6. Limpar estado local e deslogar (usuário atual também perdeu a conta)
+      localStorage.removeItem(LS_KEY);
+      localStorage.removeItem(LS_MAP);
+      setPlayer(null);
+      setOthers([]);
+      setDirectory([]);
+      setStatus("auth");
+      if (auth) await signOut(auth).catch(() => undefined);
+      notify("💥 Wipe concluído! Todas as contas foram zeradas. Crie uma conta nova para começar.", "ok");
+    } catch (e) {
+      console.warn("[PixelCity] wipe:", e);
+      notify("Erro ao executar o Wipe. Tente novamente.", "bad");
+    }
+  }, [notify, logAdmin]);
+
   const buyClothing = useCallback((id: string, useCredit = false) => {
     const p = playerRef.current; const item = clothingItems.find((c) => c.id === id); if (!p || !item) return;
     const r = chargePayment(item.preco, `Roupa ${item.nome}`, { credit: useCredit });
@@ -1480,7 +1550,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     adminSetOrgSalary, adminSetRecruitRank, adminSetItemPrice, adminLogout, addCustomObject, deleteCustomObject,
     buyCustomObject, placeSign, removeSign, setLeader, transferByRG, requestCreditCard, payBill, adminSetUniform, findUserByRG,
     dms, addFriendByRG, removeFriend, sendDM, toggleHouseLock, saveHouseFurniture, kickHouseGuest,
-    applyDamage, healPlayer, sendToHospital, setComa, clothingItems, addClothing, addClothingV2, updateClothing, deleteClothing, buyClothing, equipClothing, adminSetDebt,
+    applyDamage, healPlayer, sendToHospital, setComa, clothingItems, addClothing, addClothingV2, updateClothing, deleteClothing, wipeAllData, buyClothing, equipClothing, adminSetDebt,
     chargePayment, payCardBill, hospitalPay,
     treasury, treasuryLedger, payServiceBill, treasuryDeposit, treasurySetConfig,
     economyConfig, adminSetEconomyConfig, claimAuxilioGov,
@@ -1492,7 +1562,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     adminSetOrgSalary, adminSetRecruitRank, adminSetItemPrice, adminLogout, addCustomObject, deleteCustomObject,
     buyCustomObject, placeSign, removeSign, setLeader, transferByRG, requestCreditCard, payBill, adminSetUniform, findUserByRG,
     dms, addFriendByRG, removeFriend, sendDM, toggleHouseLock, saveHouseFurniture, kickHouseGuest,
-    applyDamage, healPlayer, sendToHospital, setComa, addClothing, addClothingV2, updateClothing, deleteClothing, buyClothing, equipClothing, adminSetDebt,
+    applyDamage, healPlayer, sendToHospital, setComa, addClothing, addClothingV2, updateClothing, deleteClothing, wipeAllData, buyClothing, equipClothing, adminSetDebt,
     chargePayment, payCardBill, hospitalPay, economyConfig, adminSetEconomyConfig, claimAuxilioGov]);
 
   /* ── Ciclo horário da Conta de Serviços (verifica a cada 60s) ── */
