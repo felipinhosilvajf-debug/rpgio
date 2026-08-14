@@ -35,6 +35,7 @@ export interface CharacterOpts {
   sapatoModelo?: ShoeStyle;
   sapatoCor?: string;
   camisaImagem?: string;
+  camisaTransform?: ShirtArtTransform;
   dir?: Dir;
   anim?: number;
   self?: boolean;
@@ -44,8 +45,8 @@ export interface CharacterOpts {
 /**
  * Renderizador de Avatar Pixel Art Autêntico (Estilo Stardew Valley).
  * - Snap estrito de pixels inteiros (Grade Pixel-Perfect).
- * - Sem antialiasing / sub-pixels intermediários.
- * - Proporções de sprites 16x32 alinhados.
+ * - Cabelos arredondados e volumosos via degraus de pixel (Pixel Steps).
+ * - Diferenciação marcada entre feminino (delicado, acinturado) e masculino (robusto, reto).
  */
 export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
   const pele = opts.pele ?? "#f0c396";
@@ -71,9 +72,9 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   // Animação calculada em deslocamento de pixels inteiros (1px ou 2px)
   const step = Math.sin(anim * 6);
   const legOff = anim ? Math.round(step * 2) : 0;
-  const breathY = Math.sin(time * 0.003) > 0.3 ? 1 : 0; // Bounce de 1px discreto
+  const breathY = Math.sin(time * 0.003) > 0.3 ? 1 : 0; // Bounce discreto de 1px
 
-  // Garante Pixel Crisp Rendering no Canvas
+  // Garante Renderização Pixel Crisp
   ctx.imageSmoothingEnabled = false;
 
   // Função utilitária para alinhamento estrito à grade (Integer Snap)
@@ -108,7 +109,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const shortBottom = inferiorModelo === "shorts" || inferiorModelo === "bermuda";
   const saia = isFem && inferiorModelo === "saia" && !u;
 
-  // Paleta de tons sólidos (Shading estrito)
+  // Paleta de tons sólidos
   const corH = shade(cor, 35);
   const corS = shade(cor, -30);
   const corD = shade(cor, -60);
@@ -130,31 +131,39 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   R(-6, 3, 12, 1, "#1c1b24");
   R(-4, 2, 8, 1, "#282636");
 
-  // ── 1. CABELO TRASEIRO ──
+  // ── 1. CABELO TRASEIRO (Volume & Caimento Arredondado) ──
   const hY = -28 + breathY;
   const drawBackHair = () => {
     const style = cabeloEstilo;
     const isLong = style === "longo" || style === "longo_liso" || style === "ondulado" || style === "trancas" || style === "bob";
+
     if (dir === "up" || style === "afro") {
-      R(-5, hY + 4, 10, 6, opts.cabelo);
-      R(-4, hY + 4, 8, 2, hHighlight);
+      R(-6, hY + 3, 12, 1, opts.cabelo);
+      R(-7, hY + 4, 14, 6, opts.cabelo);
+      R(-5, hY + 4, 10, 2, hHighlight);
+      R(-7, hY + 9, 14, 1, hShadow);
     }
+
     if (dir !== "up" && isLong) {
-      const hairLen = style === "bob" ? 5 : 9;
-      // Mecha esquerda
-      R(-6, hY + 4, 2, hairLen, opts.cabelo);
-      R(-6, hY + 4, 1, hairLen - 1, hHighlight);
-      R(-6, hY + 4 + hairLen - 2, 2, 2, hShadow);
-      // Mecha direita
-      R(4, hY + 4, 2, hairLen, opts.cabelo);
-      R(5, hY + 4, 1, hairLen - 1, hHighlight);
-      R(4, hY + 4 + hairLen - 2, 2, 2, hShadow);
+      const hairLen = style === "bob" ? 6 : 10;
+      const volExtra = isFem ? 1 : 0;
+
+      // Mecha esquerda volumosa
+      R(-6 - volExtra, hY + 3, 3 + volExtra, hairLen, opts.cabelo);
+      R(-6 - volExtra, hY + 3, 1, hairLen - 1, hHighlight);
+      R(-6 - volExtra, hY + 3 + hairLen - 2, 3 + volExtra, 2, hShadow);
+
+      // Mecha direita volumosa
+      R(3, hY + 3, 3 + volExtra, hairLen, opts.cabelo);
+      R(5 + volExtra, hY + 3, 1, hairLen - 1, hHighlight);
+      R(3, hY + 3 + hairLen - 2, 3 + volExtra, 2, hShadow);
     }
+
     if (dir !== "up" && style === "rabo") {
-      R(4, hY + 4, 3, 8, opts.cabelo);
-      R(4, hY + 4, 1, 5, hHighlight);
-      R(4, hY + 11, 3, 1, hShadow);
-      R(4, hY + 4, 3, 1, "#e2e2ee"); // Elástico
+      R(4, hY + 3, 4, 9, opts.cabelo);
+      R(4, hY + 3, 1, 6, hHighlight);
+      R(4, hY + 11, 4, 1, hShadow);
+      R(4, hY + 3, 4, 1, "#e2e2ee"); // Elástico
     }
   };
   drawBackHair();
@@ -170,7 +179,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   R(-5, sL - (boot ? 1 : 0), 4, 2 + (boot ? 1 : 0), shoeD);
   R(-4, sL - (boot ? 1 : 0), 3, 1, sapatoCor);
   R(-4, sL - (boot ? 1 : 0), 1, 1, shoeH);
-  R(-5, sL + 2, 4, 1, "#121318"); // Sola
+  R(-5, sL + 2, 4, 1, "#121318");
 
   // Sapato Direito
   R(1, sR - (boot ? 1 : 0), 4, 2 + (boot ? 1 : 0), shoeD);
@@ -194,14 +203,12 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(-3, -4 + sL, 2, 3, sk);
     R(1, -4 + sR, 2, 3, sk);
   } else {
-    // Calça retangular marcada
     R(-4, legTop + sL, 3, 6, pD);
     R(1, legTop + sR, 3, 6, pD);
     R(-3, legTop + sL, 2, 5, pB);
     R(2, legTop + sR, 2, 5, pB);
     R(-3, legTop + sL, 2, 1, pH);
     R(2, legTop + sR, 2, 1, pH);
-    // Cinto
     R(-4, legTop, 8, 1, shade(pB, -20));
     R(-3, legTop, 2, 1, shade(pB, 20));
   }
@@ -211,7 +218,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const tW = isFem ? 8 : 10;
   const tX = -tW / 2;
 
-  // Borda pixelada do tronco
   R(tX - 1, tY - 1, tW + 2, 10, corD);
   R(tX, tY, tW, 9, cor);
   R(tX, tY, tW, 2, corH);
@@ -222,7 +228,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(tX + tW - 1, tY + 3, 1, 3, corS);
   }
 
-  // Detalhes da Roupa
   if (!u) {
     if (camisaModelo === "camisa") {
       R(-2, tY, 4, 1, corH);
@@ -246,13 +251,13 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     drawShirtStamp(camisaImagem, tX, tY, tW, 9);
   }
 
-  // ── 5. BRAÇOS (Grosos no Masculino, Delicados no Feminino) ──
+  // ── 5. BRAÇOS ──
   const bW = isFem ? 2 : 3;
   const armCor = regata ? sk : shade(cor, -15);
 
   // Esquerdo
   R(tX - bW, tY + 1 + armSwing, bW, 7, armCor);
-  R(tX - bW, tY + 8 + armSwing, bW, 2, sk); // Mão
+  R(tX - bW, tY + 8 + armSwing, bW, 2, sk);
   // Direito
   R(tX + tW, tY + 1 - armSwing, bW, 7, armCor);
   R(tX + tW, tY + 8 - armSwing, bW, 2, sk);
@@ -266,40 +271,79 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   // ── 6. PESCOÇO ──
   R(-1, tY - 2, 2, 2, skS);
 
-  // ── 7. CABEÇA (Formato Quadrado Stardew) ──
+  // ── 7. CABEÇA ──
   const hW = 8;
   const hH = 8;
   const hX = -4;
   const hYF = hY + 1;
 
-  // Base da cabeça com bordas escuras sólidas
   R(hX - 1, hYF - 1, hW + 2, hH + 2, skD);
   R(hX, hYF, hW, hH, sk);
   R(hX, hYF, hW, 1, skH);
   R(hX, hYF + hH - 1, hW, 1, skS);
 
   if (isFem) {
-    // Blush rosa pixelado nas bochechas
     R(-3, hYF + 4, 1, 1, "#e07b88");
     R(2, hYF + 4, 1, 1, "#e07b88");
   }
 
-  // ── 8. CABELO FRONTAL ──
+  // ── 8. CABELO FRONTAL (Arredondado Pixelated & Volumoso) ──
   if (dir !== "up") {
-    R(hX, hYF - 1, hW, 2, opts.cabelo);
-    R(hX + 1, hYF - 1, hW - 2, 1, hHighlight);
+    const topW = isFem ? 6 : 8;
+    const midW = isFem ? 10 : 8;
 
-    if (cabeloEstilo === "franja" || cabeloEstilo === "social") {
-      R(hX, hYF + 1, hW, 2, opts.cabelo);
-    } else if (cabeloEstilo === "moicano") {
-      R(-1, hYF - 3, 2, 3, opts.cabelo);
-      R(0, hYF - 3, 1, 2, hHighlight);
-    } else if (cabeloEstilo === "afro") {
-      R(hX - 1, hYF - 2, hW + 2, 4, opts.cabelo);
+    // Degrau superior (Arredondamento do crânio)
+    R(-topW / 2, hYF - 2, topW, 1, opts.cabelo);
+    R(-topW / 2 + 1, hYF - 2, topW - 2, 1, hHighlight);
+
+    // Camada principal no topo
+    R(-midW / 2, hYF - 1, midW, 3, opts.cabelo);
+    R(-midW / 2 + 1, hYF - 1, midW - 2, 1, hHighlight);
+
+    switch (cabeloEstilo) {
+      case "franja":
+      case "social":
+        R(-4, hYF + 1, 8, 2, opts.cabelo);
+        R(-3, hYF + 2, 6, 1, hShadow);
+        break;
+
+      case "ondulado":
+      case "longo":
+      case "longo_liso":
+        R(-5, hYF + 1, 3, 4, opts.cabelo);
+        R(2, hYF + 1, 3, 4, opts.cabelo);
+        R(-4, hYF + 1, 1, 3, hHighlight);
+        R(3, hYF + 1, 1, 3, hHighlight);
+        break;
+
+      case "bob":
+        R(-5, hYF + 1, 2, 5, opts.cabelo);
+        R(3, hYF + 1, 2, 5, opts.cabelo);
+        R(-4, hYF + 5, 2, 1, hShadow);
+        R(2, hYF + 5, 2, 1, hShadow);
+        break;
+
+      case "coque":
+        R(-2, hYF - 5, 4, 1, opts.cabelo);
+        R(-3, hYF - 4, 6, 3, opts.cabelo);
+        R(-2, hYF - 4, 3, 1, hHighlight);
+        break;
+
+      case "afro":
+        R(-6, hYF - 3, 12, 1, opts.cabelo);
+        R(-7, hYF - 2, 14, 6, opts.cabelo);
+        R(-6, hYF + 4, 12, 1, hShadow);
+        R(-5, hYF - 2, 10, 1, hHighlight);
+        break;
+
+      default:
+        R(-4, hYF + 1, 8, 1, opts.cabelo);
+        break;
     }
   } else {
-    R(hX, hYF, hW, hH, opts.cabelo);
-    R(hX + 1, hYF, hW - 2, 2, hHighlight);
+    R(-3, hYF - 1, 6, 1, opts.cabelo);
+    R(-4, hYF, 8, hH, opts.cabelo);
+    R(-3, hYF, 6, 2, hHighlight);
   }
 
   if (u?.capacete) {
@@ -307,12 +351,12 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(hX, hYF - 1, hW, 1, shade(u.capacete, 20));
   }
 
-  // ── 9. ROSTO (Olhos de 1x2 e 1x1 Pixels) ──
+  // ── 9. ROSTO (Olhos Pixelados) ──
   if (dir !== "up") {
     const off = dir === "left" ? -1 : dir === "right" ? 1 : 0;
     const eyeY = hYF + 3;
 
-    // Olho Esquerdo (Branco + Íris + Pupila Pixelada)
+    // Olho Esquerdo
     R(-3 + off, eyeY, 2, 2, "#ffffff");
     R(-2 + off, eyeY, 1, 2, iris);
     R(-2 + off, eyeY + 1, 1, 1, "#11141c");
@@ -322,7 +366,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(2 + off, eyeY, 1, 2, iris);
     R(2 + off, eyeY + 1, 1, 1, "#11141c");
 
-    // Sobrancelhas (1px de espessura)
+    // Sobrancelhas
     R(-3 + off, eyeY - 1, 2, 1, hShadow);
     R(1 + off, eyeY - 1, 2, 1, hShadow);
 
