@@ -43,9 +43,9 @@ export interface CharacterOpts {
 }
 
 /**
- * Renderizador de Avatar Pixel Art Reestilizado (Estilo 16-bit orgânico).
- * - Cabelo Ultra-Arredondado por degraus suaves (Pixel Step Art).
- * - Pernas e Canelas contínuas (Preenchimento total sem transparências).
+ * Renderizador de Avatar Pixel Art Altamente Arredondado.
+ * - Cabelos de costas totalmente customizados por estilo.
+ * - Conexão sólida de pernas e canelas aos pés.
  */
 export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
   const pele = opts.pele ?? "#f0c396";
@@ -67,14 +67,12 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
 
   const isFem = sexo === "feminino";
 
-  // Passo de animação do andar
   const step = Math.sin(anim * 6);
   const legOff = anim ? Math.round(step * 2) : 0;
   const breathY = Math.sin(time * 0.003) > 0.3 ? 1 : 0;
 
   ctx.imageSmoothingEnabled = false;
 
-  // Função utilitária com integer snap
   const R = (dx: number, dy: number, w: number, h: number, c: string) => {
     ctx.fillStyle = c;
     ctx.fillRect(
@@ -106,7 +104,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const shortBottom = inferiorModelo === "shorts" || inferiorModelo === "bermuda";
   const saia = isFem && inferiorModelo === "saia" && !u;
 
-  // Cores & Sombras
+  // Paleta de Cores
   const corH = shade(cor, 35);
   const corS = shade(cor, -30);
   const corD = shade(cor, -60);
@@ -124,92 +122,151 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   const pD = shade(pB, -45);
   const armSwing = anim ? Math.round(step * 1) : 0;
 
-  // Base Y
-  const footY = 2; // Posição fixa de assentamento dos pés
-  const legTopY = -8; // Topo das pernas/quadril
+  const footY = 2; 
+  const legTopY = -8; 
 
   // ── 0. SOMBRA NO CHÃO ──
   R(-5, footY + 2, 10, 1, "#1c1b24");
   R(-4, footY + 1, 8, 1, "#282636");
 
-  // ── 1. CABELO TRASEIRO (Silhueta Arredondada em Degraus) ──
   const hY = -28 + breathY;
+
+  // ── 1. CABELO TRASEIRO (Customizado e Arredondado por Estilo) ──
   const drawBackHair = () => {
     const style = cabeloEstilo;
-    const isLong = style === "longo" || style === "longo_liso" || style === "ondulado" || style === "trancas" || style === "bob";
 
-    if (dir === "up" || style === "afro") {
-      // Formato Esférico Suave (Degraus: 4 -> 8 -> 12 -> 14 -> 12 -> 8)
-      R(-2, hY + 1, 4, 1, opts.cabelo);
-      R(-4, hY + 2, 8, 1, opts.cabelo);
-      R(-6, hY + 3, 12, 2, opts.cabelo);
-      R(-7, hY + 5, 14, 4, opts.cabelo);
-      R(-6, hY + 9, 12, 1, opts.cabelo);
-      R(-4, hY + 10, 8, 1, hShadow);
+    // QUANDO DE COSTAS (dir === "up")
+    if (dir === "up") {
+      switch (style) {
+        case "longo":
+        case "longo_liso":
+        case "ondulado":
+          // Cabelo longo volumoso nas costas com formato em oval
+          R(-3, hY, 6, 1, opts.cabelo);
+          R(-5, hY + 1, 10, 1, opts.cabelo);
+          R(-6, hY + 2, 12, 10, opts.cabelo);
+          R(-5, hY + 12, 10, 2, opts.cabelo);
+          R(-3, hY + 14, 6, 1, hShadow); // Arredondamento inferior
+          // Sombreamento e Brilho das costas
+          R(-4, hY + 2, 8, 1, hHighlight);
+          R(-6, hY + 4, 1, 8, hShadow);
+          R(5, hY + 4, 1, 8, hShadow);
+          break;
 
-      // Brilho Redondo
-      R(-3, hY + 3, 6, 1, hHighlight);
+        case "bob":
+          // Bob curto e curvado para dentro
+          R(-3, hY, 6, 1, opts.cabelo);
+          R(-5, hY + 1, 10, 1, opts.cabelo);
+          R(-6, hY + 2, 12, 6, opts.cabelo);
+          R(-5, hY + 8, 10, 1, hShadow);
+          R(-3, hY + 9, 6, 1, hShadow);
+          R(-4, hY + 2, 8, 1, hHighlight);
+          break;
+
+        case "rabo":
+          // Rabo de cavalo atrás
+          R(-3, hY, 6, 1, opts.cabelo);
+          R(-4, hY + 1, 8, 5, opts.cabelo);
+          R(-3, hY + 1, 6, 1, hHighlight);
+          // O rabo pendurado
+          R(-2, hY + 5, 4, 1, "#e2e2ee"); // Elástico
+          R(-3, hY + 6, 6, 7, opts.cabelo);
+          R(-2, hY + 13, 4, 1, hShadow);
+          break;
+
+        case "coque":
+          R(-3, hY + 2, 6, 6, opts.cabelo);
+          // Coque redondo no alto
+          R(-2, hY - 3, 4, 1, opts.cabelo);
+          R(-3, hY - 2, 6, 4, opts.cabelo);
+          R(-2, hY + 2, 4, 1, hShadow);
+          R(-2, hY - 2, 3, 1, hHighlight);
+          break;
+
+        case "trancas":
+          R(-4, hY + 1, 8, 5, opts.cabelo);
+          R(-5, hY + 6, 3, 8, opts.cabelo); // Trança Esq
+          R(2, hY + 6, 3, 8, opts.cabelo);  // Trança Dir
+          R(-4, hY + 13, 1, 1, hShadow);
+          R(3, hY + 13, 1, 1, hShadow);
+          break;
+
+        case "afro":
+          R(-3, hY - 3, 6, 1, opts.cabelo);
+          R(-5, hY - 2, 10, 1, opts.cabelo);
+          R(-7, hY - 1, 14, 10, opts.cabelo);
+          R(-5, hY + 9, 10, 1, hShadow);
+          R(-3, hY + 10, 6, 1, hShadow);
+          R(-4, hY - 1, 8, 1, hHighlight);
+          break;
+
+        default: // Curto/Social
+          R(-2, hY, 4, 1, opts.cabelo);
+          R(-4, hY + 1, 8, 6, opts.cabelo);
+          R(-3, hY + 7, 6, 1, hShadow);
+          R(-3, hY + 1, 6, 1, hHighlight);
+          break;
+      }
+      return;
     }
 
-    if (dir !== "up" && isLong) {
+    // QUANDO DE FRENTE OU LADO (Cabelo por trás dos ombros)
+    const isLong = style === "longo" || style === "longo_liso" || style === "ondulado" || style === "trancas" || style === "bob";
+    if (isLong) {
       const hairLen = style === "bob" ? 7 : 11;
       const vol = isFem ? 2 : 0;
 
-      // Mecha Esquerda Arredondada
+      // Mecha Esquerda
       R(-5 - vol, hY + 3, 3 + vol, 1, opts.cabelo);
       R(-6 - vol, hY + 4, 4 + vol, hairLen - 2, opts.cabelo);
       R(-5 - vol, hY + 3 + hairLen - 2, 3 + vol, 1, hShadow);
-      R(-4 - vol, hY + 3 + hairLen - 1, 2 + vol, 1, hShadow); // Ponta arredondada
+      R(-4 - vol, hY + 3 + hairLen - 1, 2 + vol, 1, hShadow);
       R(-5 - vol, hY + 4, 1, hairLen - 3, hHighlight);
 
-      // Mecha Direita Arredondada
+      // Mecha Direita
       R(2, hY + 3, 3 + vol, 1, opts.cabelo);
       R(2, hY + 4, 4 + vol, hairLen - 2, opts.cabelo);
       R(2, hY + 3 + hairLen - 2, 3 + vol, 1, hShadow);
-      R(2, hY + 3 + hairLen - 1, 2 + vol, 1, hShadow); // Ponta arredondada
+      R(2, hY + 3 + hairLen - 1, 2 + vol, 1, hShadow);
       R(4 + vol, hY + 4, 1, hairLen - 3, hHighlight);
     }
 
-    if (dir !== "up" && style === "rabo") {
-      // Coque / Rabo de Cavalo Arredondado
+    if (style === "rabo") {
       R(3, hY + 2, 3, 1, opts.cabelo);
       R(3, hY + 3, 5, 6, opts.cabelo);
       R(4, hY + 9, 3, 2, hShadow);
       R(3, hY + 3, 1, 5, hHighlight);
-      R(3, hY + 3, 3, 1, "#e2e2ee"); // Laço/Elástico
+      R(3, hY + 3, 3, 1, "#e2e2ee");
     }
   };
   drawBackHair();
 
-  // ── 2. PERNAS E CANELAS (Garantia de Preenchimento Completo) ──
+  // ── 2. PERNAS E CANELAS (Sólidas sem buracos invisíveis) ──
   const sL = Math.max(0, legOff);
   const sR = Math.max(0, -legOff);
 
-  // Posições das duas pernas (Esquerda e Direita)
   const leftX = -4;
   const rightX = 1;
   const legW = 3;
 
   if (saia) {
-    // Saia em A com caimento curvo
     R(-5, legTopY, 10, 1, pH);
     R(-6, legTopY + 1, 12, 3, pB);
     R(-6, legTopY + 4, 12, 1, pD);
 
-    // Canelas visíveis e sólidas preenchendo até a boca do sapato
+    // Canela sólida unindo à saia e ao sapato
     R(leftX + 1, legTopY + 4 + sL, 2, footY - (legTopY + 4), sk);
-    R(leftX + 1, legTopY + 4 + sL, 1, footY - (legTopY + 4), skS); // Sombra da canela
+    R(leftX + 1, legTopY + 4 + sL, 1, footY - (legTopY + 4), skS);
 
     R(rightX, legTopY + 4 + sR, 2, footY - (legTopY + 4), sk);
     R(rightX, legTopY + 4 + sR, 1, footY - (legTopY + 4), skS);
   } else if (shortBottom) {
-    // Shorts
     R(leftX, legTopY + sL, legW, 3, pB);
     R(rightX, legTopY + sR, legW, 3, pB);
     R(leftX, legTopY + 2 + sL, legW, 1, pD);
     R(rightX, legTopY + 2 + sR, legW, 1, pD);
 
-    // Canela exposta 100% preenchida sem vácuos até o pé
+    // Canelas expostas preenchidas completamente
     const skinStartY = legTopY + 3;
     const skinHeight = footY - skinStartY;
 
@@ -219,7 +276,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(rightX, skinStartY + sR, legW, skinHeight, sk);
     R(rightX, skinStartY + sR, 1, skinHeight, skS);
   } else {
-    // Calça comprida contínua preenchendo até o pé
+    // Calça contínua tocando nos sapatos
     const pantHeight = footY - legTopY;
 
     R(leftX, legTopY + sL, legW, pantHeight, pB);
@@ -230,22 +287,21 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(rightX, legTopY + sR, 1, pantHeight, pH);
     R(rightX + legW - 1, legTopY + sR, 1, pantHeight, pD);
 
-    // Cinto/Cintura
     R(-4, legTopY, 8, 1, shade(pB, -20));
   }
 
-  // ── 3. SAPATOS (Conectados às Pernas/Canelas) ──
+  // ── 3. SAPATOS ──
   const shoeD = shade(sapatoCor, -30);
   const shoeH = shade(sapatoCor, 25);
   const boot = sapatoModelo === "bota";
 
-  // Sapato Esquerdo
+  // Esquerdo
   R(leftX - 1, footY - (boot ? 1 : 0) + sL, 4, 2 + (boot ? 1 : 0), shoeD);
   R(leftX, footY - (boot ? 1 : 0) + sL, 3, 1, sapatoCor);
   R(leftX, footY - (boot ? 1 : 0) + sL, 1, 1, shoeH);
   R(leftX - 1, footY + 2 + sL, 4, 1, "#121318");
 
-  // Sapato Direito
+  // Direito
   R(rightX, footY - (boot ? 1 : 0) + sR, 4, 2 + (boot ? 1 : 0), shoeD);
   R(rightX + 1, footY - (boot ? 1 : 0) + sR, 3, 1, sapatoCor);
   R(rightX + 1, footY - (boot ? 1 : 0) + sR, 1, 1, shoeH);
@@ -262,7 +318,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   R(tX, tY + 7, tW, 2, corS);
 
   if (isFem) {
-    // Ajuste de cintura delicada
     R(tX, tY + 3, 1, 3, corS);
     R(tX + tW - 1, tY + 3, 1, 3, corS);
   }
@@ -312,21 +367,19 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
   // ── 7. CABEÇA ARREDONDADA ──
   const hYF = hY + 1;
 
-  // Formato do rosto em arco
   R(-3, hYF - 1, 6, 1, skD);
   R(-4, hYF, 8, 7, sk);
-  R(-3, hYF + 7, 6, 1, skS); // Queixo curvo
+  R(-3, hYF + 7, 6, 1, skS);
   R(-4, hYF, 8, 1, skH);
 
-  if (isFem) {
-    // Blush
+  if (isFem && dir !== "up") {
     R(-3, hYF + 4, 1, 1, "#e07b88");
     R(2, hYF + 4, 1, 1, "#e07b88");
   }
 
   // ── 8. CABELO FRONTAL ULTRA-ARREDONDADO ──
   if (dir !== "up") {
-    // Curvatura Superior do Crânio (Degraus: 4px -> 8px -> 10px)
+    // Topo Curvo do Crânio
     R(-2, hYF - 3, 4, 1, opts.cabelo);
     R(-4, hYF - 2, 8, 1, opts.cabelo);
     R(-3, hYF - 2, 6, 1, hHighlight);
@@ -337,7 +390,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     switch (cabeloEstilo) {
       case "franja":
       case "social":
-        // Franja arredondada caindo em arco
         R(-4, hYF + 1, 8, 1, opts.cabelo);
         R(-3, hYF + 2, 6, 1, opts.cabelo);
         R(-2, hYF + 2, 4, 1, hShadow);
@@ -346,10 +398,9 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
       case "ondulado":
       case "longo":
       case "longo_liso":
-        // Franjas laterais curvas moldando a bochecha
         R(-5, hYF + 1, 3, 2, opts.cabelo);
         R(-6, hYF + 3, 3, 3, opts.cabelo);
-        R(-5, hYF + 6, 2, 1, hShadow); // Ponta arredondada pra dentro
+        R(-5, hYF + 6, 2, 1, hShadow);
 
         R(2, hYF + 1, 3, 2, opts.cabelo);
         R(3, hYF + 3, 3, 3, opts.cabelo);
@@ -367,7 +418,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
         break;
 
       case "coque":
-        // Coque redondo no topo
         R(-2, hYF - 6, 4, 1, opts.cabelo);
         R(-3, hYF - 5, 6, 3, opts.cabelo);
         R(-2, hYF - 3, 4, 1, hShadow);
@@ -387,12 +437,6 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
         R(-4, hYF + 1, 8, 1, opts.cabelo);
         break;
     }
-  } else {
-    // Parte traseira da cabeça arredondada
-    R(-2, hYF - 2, 4, 1, opts.cabelo);
-    R(-4, hYF - 1, 8, 8, opts.cabelo);
-    R(-3, hYF + 7, 6, 1, hShadow);
-    R(-3, hYF - 1, 6, 2, hHighlight);
   }
 
   if (u?.capacete) {
@@ -416,7 +460,7 @@ export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: numbe
     R(2 + off, eyeY, 1, 2, iris);
     R(2 + off, eyeY + 1, 1, 1, "#11141c");
 
-    // Cílios/Sobrancelhas
+    // Sobrancelhas
     R(-3 + off, eyeY - 1, 2, 1, hShadow);
     R(1 + off, eyeY - 1, 2, 1, hShadow);
 
