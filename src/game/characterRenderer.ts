@@ -40,16 +40,44 @@ export interface CharacterOpts {
   anim?: number;
   self?: boolean;
   time?: number;
+  /** Escala do sprite pixel-art. 1 = compatibilidade antiga; 4 = HD pixel-art recomendado. */
+  renderScale?: number;
 }
 
 /**
- * Renderizador de Avatar Premium (Estilo Stardew Valley / Ragnarok).
- * - Usa EXCLUSIVAMENTE blocos de retângulos (R) e coordenadas pixel-art precisas.
- * - Zero elipses ou círculos vetoriais arredondados.
- * - Sombra projetada em dithering pixel-art.
- * - Diferenciação extrema de fisionomia masculina (rígida/robusta) vs feminina (delicada/curva).
+ * Renderizador público de personagem.
+ *
+ * O desenho interno usa uma grade pequena de pixel-art. A escala é aplicada
+ * no contexto do canvas para produzir um sprite maior e muito mais legível,
+ * sem borrar os pixels. Use renderScale: 4 para o novo visual HD.
  */
 export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
+  const scale = Math.max(1, Math.round(opts.renderScale ?? 4));
+  const previousSmoothing = ctx.imageSmoothingEnabled;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  // O renderer base trabalha com x/y locais. Isso evita alterar toda a
+  // matemática existente e mantém compatibilidade com os chamadores atuais.
+  drawCharacterBase(ctx, 0, 0, opts);
+
+  ctx.restore();
+  ctx.imageSmoothingEnabled = previousSmoothing;
+}
+
+/**
+ * Renderer interno de Avatar Premium (Estilo Stardew Valley / Ragnarok).
+ * A função pública drawCharacter aplica a escala HD e mantém este renderer
+ * responsável somente pela construção do sprite.
+ * - Usa exclusivamente blocos de retângulos (R) e coordenadas pixel-art.
+ * - Zero elipses ou círculos vetoriais arredondados.
+ * - Sombra projetada em dithering pixel-art.
+ * - Fisionomia masculina/feminina preservada.
+ */
+function drawCharacterBase(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
   const pele = opts.pele ?? "#f0c396";
   const sexo = opts.sexo ?? "masculino";
   const emprego = opts.emprego ?? "desempregado";
