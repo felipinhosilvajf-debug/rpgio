@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HD Composer Tool (local)</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; padding: 16px; background:#f6f8fb; color:#111 }
+    h1 { font-size:18px }
+    .row { display:flex; gap:8px; align-items:center; margin-bottom:8px }
+    input[type=file] { display:block }
+    #preview { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px }
+    canvas { border:1px solid #ddd; width:128px; height:256px; image-rendering: pixelated }
+    .thumb { display:flex; flex-direction:column; gap:4px; align-items:center }
+    button { padding:8px 12px; background:#2b7ff7; color:white; border:none; border-radius:6px; cursor:pointer }
+    button.secondary { background:#6c757d }
+    .note { font-size:13px; color:#444 }
+  </style>
+</head>
+<body>
+  <h1>HD Composer Tool — gerar sprites 256×512 (local, no upload)</h1>
+  <p class="note">Abra este arquivo localmente (duplo clique) no seu navegador. Carregue o spritesheet (Image 1) ou cole uma URL pública. A ferramenta detectará automaticamente a grade, recortará as células e comporá imagens 256×512, que você poderá baixar em ZIP.</p>
+
+  <div class="row">
+    <label for="file">1) Selecione arquivo local (recomendado):</label>
+    <input id="file" type="file" accept="image/*" />
+  </div>
+  <div class="row">
+    <label for="url">ou cole URL pública:</label>
+    <input id="url" type="url" placeholder="https://.../spritesheet.png" style="flex:1" />
+    <button id="loadUrl" class="secondary">Carregar URL</button>
+  </div>
+  <div class="row">
+    <label>Configuração:</label>
+    <button id="detectBtn">Detectar & extrair</button>
+    <button id="composeBtn" disabled>Compor 256×512</button>
+    <button id="downloadZip" disabled>Baixar ZIP</button>
+  </div>
+  <div id="info" class="note"></div>
+
+  <div id="preview"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.0/jszip.min.js"></script>
+  <script>
+    // Standalone client-side composer: detection + extraction + composition + zip download
+    let sourceImage = null;
+    let cells = []; // {canvas, sx, sy, sw, sh}
+    let composed = []; // canvases 256x512
+
+    const fileEl = document.getElementById('file');
+    const urlEl = document.getElementById('url');
+    const loadUrlBtn = document.getElementById('loadUrl');
+    const detectBtn = document.getElementById('detectBtn');
+    const composeBtn = document.getElementById('composeBtn');
+    const downloadZipBtn = document.getElementById('downloadZip');
+    const info = document.getElementById('info');
+    const preview = document.getElementById('preview');
+
+    fileEl.addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      info.textContent = 'Carregando arquivo...';
+      try { sourceImage = await loadImageFromFile(f); info.textContent = 'Arquivo carregado: ' + f.name; cells = []; composed = []; preview.innerHTML = ''; composeBtn.disabled = true; downloadZipBtn.disabled = true; } catch (err) { info.textContent = 'Erro ao carregar: ' + err; }
+    });
+
+    loadUrlBtn.addEventListener('click', async () => {
+      const url = urlEl.value.trim(); if (!url) { info.textContent = 'Cole uma URL válida'; return; }
+      info.textContent = 'Carregando URL...';
+      try { sourceImage = await loadImageFromUrl(url); info.textContent = 'Imagem carregada da URL'; cells = []; composed = []; preview.innerHTML = ''; composeBtn.disabled = true; downloadZipBtn.disabled = true; } catch (err) { info.textContent = 'Erro ao carregar URL: ' + err; }
+    });
+
+    detectBtn.addEventListener('click', () => {
+      if (!sourceImage) { info.textContent = 'Carregue uma imagem primeiro (arquivo ou URL).'; return; }
+      info.textContent = 'Detectando grade e extraindo células...';
+      try {
+        cells = extractCellsFromImage(sourceImage);
+        info.textContent = `Detectadas ${cells.length} células.`;
+        renderCellsPreview();
+        composeBtn.disabled = false;
+      } catch (err) { info.textContent = 'Erro na extração: ' + err; }
+    });
+
+    composeBtn.addEventListener('click', async () => {
+      if (!cells.length) { info.textContent = 'Nenhuma célula extraída.'; return; }
+      info.textContent = 'Compondo canvases 256×512...';
+      composed = cells.map(c => composeCellToHDCanvas(c.canvas));
+      info.textContent = `Compostos ${composed.length} canvases.`;
+      renderComposedPreview();
+      downloadZipBtn.disabled = false;
+    });
+
+    downloadZipBtn.addEventListener('click', async () => {
+      if (!composed.length) return;
+      info.textContent = 'Gerando ZIP...';
+      const zip = new JSZip();
+      const cellsFolder = zip.folder('cells');
+      const compFolder = zip.folder('compose');
+      // add cells
+      for (let i = 0; i < cells.length; i++) {
+        const c = cells[i].canvas;
+        const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+        cellsFolder.file(`cell_${i}.png`, blob);
+      }
+      for (let i = 0; i < composed.length; i++) {
+        const c = composed[i];
+        const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+        compFolder.file(`comp_${i}.png`, blob);
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(content);
+      a.download = 'hd-output.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      info.textContent = 'ZIP gerado (hd-output.zip) — baixe e envie para o repositório ou carregue aqui.';
+    });
+
+    // Utilities (same logic as hdClientComposer)
+    function loadImageFromFile(file) {
+      return new Promise((res, rej) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image(); img.crossOrigin = 'anonymous';
+        img.onload = () => { URL.revokeObjectURL(url); res(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('failed to load file')); };
+        img.src = url;
+      });
+    }
+    function loadImageFromUrl(url) {
+      return new Promise((res, rej) => {
+        const img = new Image(); img.crossOrigin = 'anonymous';
+        img.onload = () => res(img); img.onerror = () => rej(new Error('failed to load url')); img.src = url;
+      });
+    }
+
+    function columnProjection(imgData, w, h) {
+      const cols = new Array(w).fill(0); const data = imgData.data;
+      for (let x = 0; x < w; x++) { let sum = 0; for (let y = 0; y < h; y++) { const idx = (y * w + x) * 4 + 3; if (data[idx] > 8) sum++; } cols[x] = sum; }
+      return cols;
+    }
+    function rowProjection(imgData, w, h) { const rows = new Array(h).fill(0); const data = imgData.data; for (let y = 0; y < h; y++) { let sum = 0; for (let x = 0; x < w; x++) { const idx = (y * w + x) * 4 + 3; if (data[idx] > 8) sum++; } rows[y] = sum; } return rows; }
+    function spansFromProjection(proj) { const spans = []; let inSpan = false; let start = 0; for (let i = 0; i < proj.length; i++) { if (!inSpan && proj[i] > 0) { inSpan = true; start = i; } if (inSpan && proj[i] === 0) { inSpan = false; spans.push([start, i - 1]); } } if (inSpan) spans.push([start, proj.length - 1]); return spans; }
+    function mergeClose(spans, gapTolerance = 6) { if (!spans.length) return spans; const out = []; let [s, e] = spans[0]; for (let i = 1; i < spans.length; i++) { const [ns, ne] = spans[i]; if (ns - e <= gapTolerance) { e = ne; } else { out.push([s, e]); s = ns; e = ne; } } out.push([s, e]); return out; }
+
+    function extractCellsFromImage(img) {
+      const w = img.width, h = img.height;
+      const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.clearRect(0,0,w,h); ctx.drawImage(img,0,0);
+      const imgData = ctx.getImageData(0,0,w,h);
+      const cols = columnProjection(imgData, w, h);
+      const rows = rowProjection(imgData, w, h);
+      let colSpans = spansFromProjection(cols);
+      let rowSpans = spansFromProjection(rows);
+      colSpans = mergeClose(colSpans, 6); rowSpans = mergeClose(rowSpans, 6);
+      if (colSpans.length === 0 || rowSpans.length === 0) {
+        const out = document.createElement('canvas'); out.width = w; out.height = h; const octx = out.getContext('2d'); octx.drawImage(img,0,0); return [{ canvas: out, sx:0, sy:0, sw:w, sh:h }];
+      }
+      const cellsLocal = [];
+      for (let ry = 0; ry < rowSpans.length; ry++) {
+        for (let cx = 0; cx < colSpans.length; cx++) {
+          const [sx,ex] = colSpans[cx]; const [sy,ey] = rowSpans[ry]; const sw = ex - sx + 1; const sh = ey - sy + 1;
+          const out = document.createElement('canvas'); out.width = sw; out.height = sh; const octx = out.getContext('2d'); octx.imageSmoothingEnabled = false; octx.clearRect(0,0,sw,sh); octx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+          cellsLocal.push({ canvas: out, sx, sy, sw, sh });
+        }
+      }
+      return cellsLocal;
+    }
+
+    function composeCellToHDCanvas(cellCanvas, baseW = 256, baseH = 512) {
+      const img = cellCanvas; const cW = img.width, cH = img.height; const canvas = document.createElement('canvas'); canvas.width = baseW; canvas.height = baseH; const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false; ctx.clearRect(0,0,baseW,baseH);
+      const maxW = Math.floor(baseW * 0.6); const maxH = Math.floor(baseH * 0.9); const scale = Math.min(maxW / cW, maxH / cH); const dw = Math.max(1, Math.floor(cW * scale)); const dh = Math.max(1, Math.floor(cH * scale)); const drawX = Math.floor((baseW - dw) / 2); const bottomY = Math.floor(baseH * 0.86); const drawY = Math.floor(bottomY - dh);
+      ctx.drawImage(img, 0, 0, cW, cH, drawX, drawY, dw, dh); return canvas;
+    }
+
+    function renderCellsPreview() {
+      preview.innerHTML = '';
+      for (let i = 0; i < cells.length; i++) {
+        const div = document.createElement('div'); div.className = 'thumb'; const c = cells[i].canvas; const d = document.createElement('canvas'); d.width = c.width; d.height = c.height; d.getContext('2d').drawImage(c,0,0); d.style.width = '64px'; d.style.height = '64px'; div.appendChild(d); const lbl = document.createElement('div'); lbl.textContent = `cell ${i}`; div.appendChild(lbl); preview.appendChild(div);
+      }
+    }
+    function renderComposedPreview() {
+      preview.innerHTML = '';
+      for (let i = 0; i < composed.length; i++) {
+        const div = document.createElement('div'); div.className='thumb'; const c = composed[i]; const d = document.createElement('canvas'); d.width = c.width; d.height = c.height; d.getContext('2d').drawImage(c,0,0); d.style.width='128px'; d.style.height='256px'; div.appendChild(d); const lbl = document.createElement('div'); lbl.textContent = `comp ${i}`; div.appendChild(lbl); preview.appendChild(div);
+      }
+    }
+  </script>
+</body>
+</html>
