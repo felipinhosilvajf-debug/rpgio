@@ -1,0 +1,9 @@
+<!-- placeholder cell extracted from sheet (visual sample) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="100%" height="100%" fill="none" />
+  <rect x="10" y="6" width="44" height="18" rx="6" fill="#8e44ad" />
+  <rect x="14" y="22" width="36" height="26" rx="6" fill="#f0c396" />
+  <rect x="22" y="30" width="4" height="4" fill="#11141c" />
+  <rect x="38" y="30" width="4" height="4" fill="#11141c" />
+  <rect x="14" y="46" width="36" height="12" rx="3" fill="#1a1f2c" />
+</svg>
