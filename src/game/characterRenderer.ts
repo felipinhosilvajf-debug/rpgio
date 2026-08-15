@@ -1,4 +1,13 @@
-import type { BottomStyle, Dir, HairStyle, ShirtArtTransform, ShirtStyle, ShoeStyle, Sexo, Uniform } from "./types";
+import type {
+  BottomStyle,
+  Dir,
+  HairStyle,
+  ShirtArtTransform,
+  ShirtStyle,
+  ShoeStyle,
+  Sexo,
+  Uniform,
+} from "./types";
 import { getUniform } from "./jobs";
 import { getGenderBodyStyle, toBodyGender } from "../utils/avatarHelpers";
 
@@ -40,44 +49,32 @@ export interface CharacterOpts {
   anim?: number;
   self?: boolean;
   time?: number;
-  /** Escala do sprite pixel-art. 1 = compatibilidade antiga; 4 = HD pixel-art recomendado. */
-  renderScale?: number;
 }
 
 /**
- * Renderizador público de personagem.
+ * Render Character HD v2
  *
- * O desenho interno usa uma grade pequena de pixel-art. A escala é aplicada
- * no contexto do canvas para produzir um sprite maior e muito mais legível,
- * sem borrar os pixels. Use renderScale: 4 para o novo visual HD.
+ * IMPORTANTE:
+ * - O tamanho NO MUNDO permanece praticamente o mesmo do renderer antigo.
+ * - A arte é desenhada internamente em uma grade 4x maior e depois reduzida
+ *   com nearest-neighbor. Isso cria mais detalhes sem deixar o personagem gigante.
+ * - Não usa "scale(4)" no canvas principal.
+ * - O resultado é um sprite pixel-art detalhado, não uma ampliação do sprite antigo.
+ *
+ * Perfil visual:
+ * - 32/64-bit RPG pixel art
+ * - rosto com olhos, sobrancelhas, nariz e boca
+ * - cabelo com volume e vários tons
+ * - uniforme com gola, lapelas, botões, bolsos, ombreiras e distintivos
+ * - mãos e calçados definidos
+ * - sombra e outline seletivos
  */
-export function drawCharacter(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
-  const scale = Math.max(1, Math.round(opts.renderScale ?? 4));
-  const previousSmoothing = ctx.imageSmoothingEnabled;
-
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-
-  // O renderer base trabalha com x/y locais. Isso evita alterar toda a
-  // matemática existente e mantém compatibilidade com os chamadores atuais.
-  drawCharacterBase(ctx, 0, 0, opts);
-
-  ctx.restore();
-  ctx.imageSmoothingEnabled = previousSmoothing;
-}
-
-/**
- * Renderer interno de Avatar Premium (Estilo Stardew Valley / Ragnarok).
- * A função pública drawCharacter aplica a escala HD e mantém este renderer
- * responsável somente pela construção do sprite.
- * - Usa exclusivamente blocos de retângulos (R) e coordenadas pixel-art.
- * - Zero elipses ou círculos vetoriais arredondados.
- * - Sombra projetada em dithering pixel-art.
- * - Fisionomia masculina/feminina preservada.
- */
-function drawCharacterBase(ctx: CanvasRenderingContext2D, x: number, y: number, opts: CharacterOpts) {
+export function drawCharacter(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  opts: CharacterOpts
+) {
   const pele = opts.pele ?? "#f0c396";
   const sexo = opts.sexo ?? "masculino";
   const emprego = opts.emprego ?? "desempregado";
@@ -90,7 +87,9 @@ function drawCharacterBase(ctx: CanvasRenderingContext2D, x: number, y: number, 
   const sapatoModelo = opts.sapatoModelo ?? "tenis";
   const sapatoCor = opts.sapatoCor ?? "#1a1f2c";
   const camisaImagem = opts.camisaImagem ?? "";
-  const camisaTransform = opts.camisaTransform ?? { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 };
+  const camisaTransform = opts.camisaTransform ?? {
+    x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0,
+  };
   const dir = opts.dir ?? "down";
   const anim = opts.anim ?? 0;
   const self = opts.self ?? false;
@@ -98,399 +97,553 @@ function drawCharacterBase(ctx: CanvasRenderingContext2D, x: number, y: number, 
 
   const isFem = sexo === "feminino";
   const body = getGenderBodyStyle(toBodyGender(sexo));
-
-  const step = Math.sin(anim * 6);
-  const legOff = anim ? step * 2.4 : 0;
-  const breathY = Math.sin(time * 0.0028) * 0.45;
-
-  const R = (dx: number, dy: number, w: number, h: number, c: string) => {
-    ctx.fillStyle = c;
-    ctx.fillRect(x + dx, y + dy, w, h);
-  };
-
-  const drawShirtStamp = (src: string, sx: number, sy: number, sw: number, sh: number, transform: ShirtArtTransform) => {
-    let image = shirtImageCache.get(src);
-    if (!image) { image = new Image(); image.src = src; shirtImageCache.set(src, image); }
-    if (image.complete && image.naturalWidth > 0) {
-      const t = transform;
-      ctx.save();
-      ctx.beginPath(); ctx.rect(x + sx + 0.6, y + sy + 1, sw - 1.2, sh - 2); ctx.clip();
-      ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 0.9;
-      ctx.translate(x + t.x, y + sy + 4.5 + t.y);
-      ctx.rotate((t.rotation * Math.PI) / 180);
-      ctx.scale(t.scaleX, t.scaleY);
-      ctx.drawImage(image, -(sw - 2.5) / 2, -3, sw - 2.5, 6);
-      ctx.globalAlpha = 1; ctx.restore();
-    }
-  };
-
   const u = uniforme ?? getUniform(emprego);
   const cor = u?.cor ?? opts.cor;
   const armed = armedItem === "arma_fogo" || armedItem === "municao";
-  const regata = camisaModelo === "regata" && !u;
-  const shortBottom = inferiorModelo === "shorts" || inferiorModelo === "bermuda";
-  const saia = isFem && inferiorModelo === "saia" && !u;
 
-  // Paleta de tons com Hue Shifting
-  const corH = shade(cor, 42); // Highlight
-  const corS = shade(cor, -28); // Shadow
-  const corD = shade(cor, -52); // Outline seletivo
-  const skH = shade(pele, 24);
+  const step = Math.sin(anim * 6);
+  const legOff = anim ? step * 1.15 : 0;
+  const armSwing = anim ? step * 0.75 : 0;
+  const breathY = Math.sin(time * 0.0028) * 0.16;
+
+  /*
+   * Mantemos aproximadamente 24x34 unidades no canvas principal.
+   * A arte interna é 4x: 96x136.
+   */
+  const S = 4;
+  const W = 96;
+  const H = 136;
+
+  const off = document.createElement("canvas");
+  off.width = W;
+  off.height = H;
+
+  const g = off.getContext("2d");
+  if (!g) return;
+
+  g.imageSmoothingEnabled = false;
+  g.clearRect(0, 0, W, H);
+
+  const P = (v: number) => Math.round(v * S);
+
+  const R = (
+    dx: number,
+    dy: number,
+    w: number,
+    h: number,
+    c: string
+  ) => {
+    g.fillStyle = c;
+    g.fillRect(P(dx), P(dy), Math.max(1, P(w)), Math.max(1, P(h)));
+  };
+
+  const poly = (points: Array<[number, number]>, c: string) => {
+    g.fillStyle = c;
+    g.beginPath();
+    g.moveTo(P(points[0][0]), P(points[0][1]));
+    for (let i = 1; i < points.length; i++) {
+      g.lineTo(P(points[i][0]), P(points[i][1]));
+    }
+    g.closePath();
+    g.fill();
+  };
+
+  const corH = shade(cor, 34);
+  const corH2 = shade(cor, 18);
+  const corS = shade(cor, -24);
+  const corD = shade(cor, -48);
+  const corD2 = shade(cor, -66);
+
+  const skH = shade(pele, 22);
   const sk = pele;
-  const skS = shade(pele, -26);
-  const skD = shade(pele, -48);
-  const hHighlight = shade(opts.cabelo, 22);
-  const hShadow = shade(opts.cabelo, -30);
-  const iris = irisFromHair(opts.cabelo);
+  const skS = shade(pele, -22);
+  const skD = shade(pele, -42);
 
-  const pB = u ? shade(cor, -38) : calcaCor;
+  const hair = opts.cabelo;
+  const hH = shade(hair, 28);
+  const hH2 = shade(hair, 12);
+  const hS = shade(hair, -28);
+  const hD = shade(hair, -46);
+  const iris = irisFromHair(hair);
+
+  const pB = u ? shade(cor, -34) : calcaCor;
   const pH = shade(pB, 20);
-  const pS = shade(pB, -24);
-  const pD = shade(pB, -42);
-  const armSwing = anim ? step * 1.5 : 0;
+  const pS = shade(pB, -22);
+  const pD = shade(pB, -46);
 
-  // ── 0. SOMBRA PROJETADA EM PIXEL-ART DITHERING ──
-  R(-7, 3, 14, 1, "rgba(0,0,0,0.14)");
-  R(-5, 2, 10, 1, "rgba(0,0,0,0.22)");
-  R(-3, 1, 6, 1, "rgba(0,0,0,0.30)");
+  const shoeH = shade(sapatoCor, 24);
+  const shoeS = shade(sapatoCor, -24);
+  const shoeD = shade(sapatoCor, -48);
 
-  // ── 1. CABELO TRASEIRO (Cai atrás do tronco — Stardew Style) ──
-  const hY = -28 + breathY;
-  const drawBackHair = () => {
-    const style = cabeloEstilo;
-    const isLong = style === "longo" || style === "longo_liso" || style === "ondulado" || style === "trancas" || style === "bob";
-    if (dir === "up" || style === "afro") {
-      R(-5, hY + 4, 10, 6, opts.cabelo);
-      R(-4, hY + 4, 8, 2, hHighlight);
-    }
-    if (dir !== "up" && isLong) {
-      const hairLen = style === "bob" ? 5 : 10;
-      // Mecha esquerda
-      R(-5.5, hY + 4, 2, hairLen, opts.cabelo);
-      R(-5.5, hY + 4, 1, hairLen - 1, hHighlight);
-      R(-5.5, hY + 4 + hairLen - 1.5, 2, 1.5, hShadow);
-      // Mecha direita
-      R(3.5, hY + 4, 2, hairLen, opts.cabelo);
-      R(4.5, hY + 4, 1, hairLen - 1, hHighlight);
-      R(3.5, hY + 4 + hairLen - 1.5, 2, 1.5, hShadow);
-      if (style === "trancas") {
-        // Detalhe de amarração/separador de trança
-        R(-5.5, hY + 4 + hairLen - 3, 2, 1, hShadow);
-        R(3.5, hY + 4 + hairLen - 3, 2, 1, hShadow);
-      }
-    }
-    if (dir !== "up" && style === "rabo") {
-      R(3.5, hY + 4, 2.5, 9, opts.cabelo);
-      R(3.5, hY + 4, 1, 6, hHighlight);
-      R(3.5, hY + 11.5, 2.5, 1.5, hShadow);
-      R(3.5, hY + 4, 2.5, 0.8, "#d8d8e8"); // Elástico
-    }
+  const cx = 12;
+  const top = -0.15;
+
+  // ─────────────────────────────────────────────
+  // 0. Sombra no chão — pequena, para não aumentar o footprint
+  // ─────────────────────────────────────────────
+  R(cx - 7, 31.0, 14, 0.7, "rgba(0,0,0,0.20)");
+  R(cx - 5, 30.4, 10, 0.7, "rgba(0,0,0,0.14)");
+  R(cx - 3, 30.0, 6, 0.5, "rgba(0,0,0,0.10)");
+
+  // ─────────────────────────────────────────────
+  // 1. Pernas / calça
+  // ─────────────────────────────────────────────
+  const legTop = 20.0;
+  const leftLeg = -3.8 + Math.max(0, legOff);
+  const rightLeg = 0.2 + Math.max(0, -legOff);
+
+  R(cx + leftLeg - 0.45, legTop, 4.25, 8.3, pD);
+  R(cx + rightLeg - 0.45, legTop, 4.25, 8.3, pD);
+
+  R(cx + leftLeg, legTop + 0.3, 3.35, 7.4, pB);
+  R(cx + rightLeg, legTop + 0.3, 3.35, 7.4, pB);
+
+  R(cx + leftLeg + 0.25, legTop + 0.45, 2.2, 1.15, pH);
+  R(cx + rightLeg + 0.25, legTop + 0.45, 2.2, 1.15, pH);
+
+  R(cx + leftLeg + 2.65, legTop + 1.2, 0.45, 5.9, pS);
+  R(cx + rightLeg + 2.65, legTop + 1.2, 0.45, 5.9, pS);
+
+  R(cx + leftLeg + 0.2, legTop + 6.5, 2.9, 0.65, pS);
+  R(cx + rightLeg + 0.2, legTop + 6.5, 2.9, 0.65, pS);
+
+  // Cinto
+  R(cx - 4.5, legTop - 0.55, 9, 1.15, shade(pB, -18));
+  R(cx - 0.65, legTop - 0.65, 1.3, 1.35, "#b89a4a");
+  R(cx - 0.35, legTop - 0.42, 0.7, 0.75, "#e1c46b");
+
+  // ─────────────────────────────────────────────
+  // 2. Sapatos — desenho com sola, biqueira e brilho
+  // ─────────────────────────────────────────────
+  const drawShoe = (sx: number, sy: number, flip = false) => {
+    const bx = cx + sx;
+    R(bx - (flip ? 0.15 : 0.35), sy, 4.0, 2.15, shoeD);
+    R(bx - (flip ? 0.05 : 0.2), sy - 0.35, 3.45, 1.7, sapatoCor);
+    R(bx + (flip ? 0.2 : 0.0), sy - 0.2, 2.25, 0.48, shoeH);
+    R(bx + (flip ? 2.5 : 0.3), sy + 0.8, 0.75, 0.42, shoeS);
+    R(bx - 0.25, sy + 1.9, 4.4, 0.55, "#0b0e15");
+    R(bx + 0.25, sy + 1.35, 2.7, 0.3, shade(sapatoCor, 12));
   };
-  drawBackHair();
 
-  // ── 2. SAPATOS (Estrutura blocky com sola) ──
-  const sL = Math.max(0, legOff);
-  const sR = Math.max(0, -legOff);
-  const shoeD = shade(sapatoCor, -28);
-  const shoeH = shade(sapatoCor, 22);
-  const boot = sapatoModelo === "bota";
-  const social = sapatoModelo === "social";
-  const shH = boot ? 3.5 : social ? 1.8 : 2.2;
-  
-  // Sapato Esquerdo
-  R(-4.5, sL - (boot ? 1.5 : 0.8), 4, shH, shoeD);
-  R(-4.1, sL - (boot ? 1.2 : 0.5), 3.2, shH - 0.5, sapatoCor);
-  R(-3.8, sL - (boot ? 1.2 : 0.5), 2, 0.6, shoeH); // Brilho bico
-  R(-4.5, sL + 0.5, 4, 0.6, "#10131b"); // Sola
+  drawShoe(leftLeg - 0.15, 28.0 + Math.max(0, legOff) * 0.1, false);
+  drawShoe(rightLeg + 0.25, 28.0 + Math.max(0, -legOff) * 0.1, true);
 
-  // Sapato Direito
-  R(0.5, sR - (boot ? 1.5 : 0.8), 4, shH, shoeD);
-  R(0.9, sR - (boot ? 1.2 : 0.5), 3.2, shH - 0.5, sapatoCor);
-  R(1.2, sR - (boot ? 1.2 : 0.5), 2, 0.6, shoeH);
-  R(0.5, sR + 0.5, 4, 0.6, "#10141d");
+  // ─────────────────────────────────────────────
+  // 3. Tronco
+  // ─────────────────────────────────────────────
+  const tY = 10.2 + breathY;
+  const tW = isFem ? 9.2 : 11.2;
+  const tX = cx - tW / 2;
 
-  // ── 3. PARTE INFERIOR (Calça / Saia / Shorts com fisionomia correspondente) ──
-  const legTop = -8.5;
-  if (saia) {
-    // Saia feminina: blocky evasê
-    R(-5, legTop, 10, 4.5, pD);
-    R(-4.5, legTop + 0.4, 9, 3.8, pB);
-    R(-4.1, legTop + 0.4, 8.2, 1, pH);
-    R(-4.5, legTop + 3.4, 9, 0.8, pS);
-    // Pernas de pele visíveis embaixo
-    R(-3.6, -4.2 + sL, 2.6, 2.4, sk);
-    R(1, -4.4 + sR, 2.6, 2.4, sk);
-  } else if (shortBottom) {
-    // Shorts/Bermuda: exibe coxa/joelho de pele
-    R(-4.1, legTop + sL, 3.6, 3.2, pD);
-    R(0.5, legTop + sR, 3.6, 3.2, pD);
-    R(-3.7, legTop + 0.3 + sL, 2.8, 2.6, pB);
-    R(0.9, legTop + 0.3 + sR, 2.8, 2.6, pB);
-    // Pele
-    R(-3.6, -4.4 + sL, 2.6, 2.8, sk);
-    R(1, -4.4 + sR, 2.6, 2.8, sk);
-    R(-3.6, -4.2 + sL, 2.2, 1, skH);
-    R(1.2, -4.2 + sR, 2.2, 1, skH);
-  } else {
-    // Calça comprida: pernas paralelas e sólidas
-    R(-4.4, legTop + sL, 3.8, 6.8, pD);
-    R(0.6, legTop + sR, 3.8, 6.8, pD);
-    R(-4, legTop + 0.4 + sL, 3, 5.8, pB);
-    R(1, legTop + 0.4 + sR, 3, 5.8, pB);
-    R(-4, legTop + 0.6 + sL, 3, 1.2, pH);
-    R(1, legTop + 0.6 + sR, 3, 1.2, pH);
-    R(-4, -2.8 + sL, 3, 1, pS);
-    R(1, -2.8 + sR, 3, 1, pS);
-    R(-2.2, legTop + 0.6 + sL, 0.6, 4.8, pS); // Costura lateral
-    R(1.6, legTop + 0.6 + sR, 0.6, 4.8, pS);
-    // Cinto
-    R(-4.4, legTop, 8.8, 1.2, shade(pB, -16));
-    R(-3.5, legTop, 1.4, 1.2, shade(pB, 14)); // Fivela
-  }
+  // Silhueta / outline
+  R(tX - 0.65, tY - 0.5, tW + 1.3, 11.2, corD2);
 
-  // ── 4. TRONCO / CAMISA (Masculino robusto, Feminino delicado) ──
-  const tY = -17 + breathY;
-  const tW = isFem ? 9 : 11; // Feminino mais estreito na cintura (delicado)
-  const tX = -tW / 2;
+  // Ombros
+  poly([
+    [tX - 0.55, tY + 0.1],
+    [tX + 1.3, tY - 0.5],
+    [tX + tW - 1.3, tY - 0.5],
+    [tX + tW + 0.55, tY + 0.1],
+    [tX + tW - 0.25, tY + 2.0],
+    [tX + 0.25, tY + 2.0],
+  ], corD);
 
-  // Outline
-  R(tX - 0.4, tY - 0.4, tW + 0.8, 10.8, corD);
-  // Base
-  R(tX, tY, tW, 10, cor);
-  // Highlight e sombra
-  R(tX, tY, tW, 2.5, corH);
-  R(tX, tY + 7.5, tW, 2.5, corS);
-  // Curvatura de cintura (Stardew Style)
+  R(tX, tY, tW, 9.8, cor);
+  R(tX + 0.45, tY + 0.35, tW - 0.9, 1.6, corH);
+  R(tX + 0.4, tY + 7.2, tW - 0.8, 2.2, corS);
+
+  // Contorno lateral e cintura
+  R(tX, tY + 2, 0.65, 6.5, corH2);
+  R(tX + tW - 0.65, tY + 2, 0.65, 6.5, corD);
   if (isFem) {
-    R(tX, tY + 4, 0.8, 3, corS);
-    R(tX + tW - 0.8, tY + 4, 0.8, 3, corS);
-  } else {
-    // Ombros masculinos largos e marcados (robustez)
-    R(tX - 0.8, tY, 0.8, 4, corD);
-    R(tX - 0.4, tY, 0.8, 3.6, cor);
-    R(tX - 0.4, tY, 0.8, 1.2, corH);
-    R(tX + tW, tY, 0.8, 4, corD);
-    R(tX + tW - 0.4, tY, 0.8, 3.6, cor);
-    R(tX + tW - 0.4, tY, 0.8, 1.2, corH);
+    R(tX + 0.6, tY + 4.4, 0.7, 2.5, corS);
+    R(tX + tW - 1.3, tY + 4.4, 0.7, 2.5, corS);
   }
 
-  // Modelos de camisa
-  if (!u) {
-    if (camisaModelo === "camisa") {
-      R(-2.2, tY, 2, 1.6, corH); R(0.2, tY, 2, 1.6, corH);
-      R(-0.3, tY + 1.6, 0.6, 7.8, corD);
-      R(-0.5, tY + 2.8, 1, 1, "#e8e8ea"); R(-0.5, tY + 5.2, 1, 1, "#e8e8ea");
-    } else if (camisaModelo === "jaqueta") {
-      R(tX + 0.4, tY + 0.6, 1.2, 8.2, corS); R(-tX - 1.6, tY + 0.6, 1.2, 8.2, corS); R(-0.4, tY + 0.6, 0.8, 8.2, "#c8ccd4");
-    } else if (camisaModelo === "blusa") {
-      R(tX + 0.4, tY + 3.8, tW - 0.8, 0.8, corS);
-    } else if (camisaModelo === "camiseta") {
-      R(-1.6, tY, 3.2, 1.4, corD);
-    } else if (regata) {
-      // Ombro de pele visível na regata
-      const ombroW = isFem ? 1.6 : 2.2;
-      R(tX, tY, ombroW, 2.2, sk);
-      R(-tX - ombroW, tY, ombroW, 2.2, sk);
-      R(tX, tY, ombroW, 0.8, skH);
-      R(-tX - ombroW, tY, ombroW, 0.8, skH);
-      // Alças
-      R(tX + ombroW, tY, 1.1, 2, corD);
-      R(-tX - ombroW - 1.1, tY, 1.1, 2, corD);
+  // ─────────────────────────────────────────────
+  // 4. Uniforme detalhado
+  // ─────────────────────────────────────────────
+  if (u) {
+    // Gola
+    R(cx - 3.25, tY - 0.25, 2.5, 1.2, corD);
+    R(cx + 0.75, tY - 0.25, 2.5, 1.2, corD);
+    poly([
+      [cx - 3.0, tY + 0.4],
+      [cx - 1.2, tY + 0.4],
+      [cx - 0.5, tY + 2.2],
+      [cx - 2.0, tY + 1.55],
+    ], corH2);
+    poly([
+      [cx + 3.0, tY + 0.4],
+      [cx + 1.2, tY + 0.4],
+      [cx + 0.5, tY + 2.2],
+      [cx + 2.0, tY + 1.55],
+    ], corS);
+
+    // Linha central / abertura
+    R(cx - 0.42, tY + 1.2, 0.84, 7.8, corD);
+
+    // Botões
+    for (let i = 0; i < 4; i++) {
+      const by = tY + 2.0 + i * 1.65;
+      R(cx - 0.22, by, 0.44, 0.44, "#d6b65a");
+      R(cx - 0.10, by + 0.08, 0.20, 0.20, "#f0d67b");
     }
-  } else {
+
+    // Bolsos
+    R(cx - 4.0, tY + 2.45, 3.0, 2.0, corD);
+    R(cx - 3.65, tY + 2.72, 2.3, 1.25, corS);
+    R(cx - 3.35, tY + 2.72, 1.7, 0.35, corH2);
+
+    R(cx + 1.0, tY + 2.45, 3.0, 2.0, corD);
+    R(cx + 1.35, tY + 2.72, 2.3, 1.25, corS);
+    R(cx + 1.35, tY + 2.72, 1.7, 0.35, corH2);
+
+    // Ombreiras
+    R(tX - 0.45, tY + 0.1, 2.55, 1.0, corD);
+    R(tX - 0.1, tY + 0.1, 1.9, 0.5, corH2);
+    R(tX + tW - 2.1, tY + 0.1, 2.55, 1.0, corD);
+    R(tX + tW - 1.8, tY + 0.1, 1.9, 0.5, corH2);
+
+    // Insígnias / medalhas — pequenos blocos com leitura visual
+    R(cx - 3.1, tY + 5.0, 1.0, 0.65, "#c9ad5a");
+    R(cx - 2.8, tY + 5.15, 0.35, 0.35, "#e7d47c");
+    R(cx - 1.85, tY + 5.0, 0.75, 0.65, "#4f76a8");
+    R(cx - 1.6, tY + 5.15, 0.3, 0.35, "#9fc0e8");
+
+    R(cx + 1.1, tY + 5.0, 1.0, 0.65, "#9b3939");
+    R(cx + 1.35, tY + 5.15, 0.35, 0.35, "#d86565");
+    R(cx + 2.35, tY + 5.0, 0.75, 0.65, "#4d8a65");
+
+    // Faixa/colete existentes
     if (u.colete) {
-      R(-3.8, tY + 1.4, 7.6, 5.8, u.colete);
-      R(-3.8, tY + 1.4, 7.6, 1.2, shade(u.colete, 22));
-      R(-3.8, tY + 5.6, 7.6, 1.6, shade(u.colete, -18));
+      R(cx - 3.7, tY + 1.6, 7.4, 5.6, u.colete);
+      R(cx - 3.7, tY + 1.6, 7.4, 0.8, shade(u.colete, 24));
+      R(cx - 3.7, tY + 6.25, 7.4, 0.9, shade(u.colete, -22));
+      // recoloca alguns elementos de destaque por cima do colete
+      R(cx - 3.1, tY + 2.45, 2.1, 0.75, shade(u.colete, -30));
+      R(cx + 1.0, tY + 2.45, 2.1, 0.75, shade(u.colete, -30));
     }
-    if (u.faixa) R(-5, tY + 5, 10, 1, u.faixa);
+    if (u.faixa) {
+      R(cx - 5.0, tY + 5.1, 10, 0.75, u.faixa);
+    }
+  } else {
+    // Roupas civis detalhadas
+    if (camisaModelo === "camisa") {
+      R(cx - 3.2, tY + 0.4, 2.5, 1.4, corH);
+      R(cx + 0.7, tY + 0.4, 2.5, 1.4, corH);
+      R(cx - 0.38, tY + 1.2, 0.76, 8, corD);
+      for (const by of [3.0, 5.0, 7.0]) R(cx - 0.25, tY + by, 0.5, 0.5, "#e7e7e7");
+    } else if (camisaModelo === "jaqueta") {
+      R(tX + 0.35, tY + 0.8, 1.45, 8.1, corS);
+      R(tX + tW - 1.8, tY + 0.8, 1.45, 8.1, corS);
+      R(cx - 0.4, tY + 0.8, 0.8, 8.1, "#c8ccd4");
+    } else if (camisaModelo === "blusa") {
+      R(tX + 0.55, tY + 3.6, tW - 1.1, 0.7, corS);
+    } else {
+      R(cx - 1.9, tY, 3.8, 1.2, corD);
+      R(cx - 1.25, tY + 0.25, 2.5, 0.5, corH2);
+    }
   }
 
-  // Estampa transformável
+  // Estampa, se existir
   if (camisaImagem && !u?.colete) {
-    drawShirtStamp(camisaImagem, tX, tY, tW, 10, camisaTransform);
+    const image = shirtImageCache.get(camisaImagem) ??
+      (() => {
+        const img = new Image();
+        img.src = camisaImagem;
+        shirtImageCache.set(camisaImagem, img);
+        return img;
+      })();
+
+    if (image.complete && image.naturalWidth > 0) {
+      g.save();
+      g.beginPath();
+      g.rect(P(tX), P(tY), P(tW), P(10));
+      g.clip();
+      g.imageSmoothingEnabled = false;
+      g.globalAlpha = 0.88;
+      const tr = camisaTransform;
+      g.translate(P(cx + tr.x), P(tY + 4.6 + tr.y));
+      g.rotate((tr.rotation * Math.PI) / 180);
+      g.scale(tr.scaleX, tr.scaleY);
+      g.drawImage(image, -P((tW - 1.5) / 2), -P(2.8), P(tW - 1.5), P(5.6));
+      g.restore();
+    }
   }
 
-  // ── 5. BRAÇOS (Masculino grosso/forte, Feminino fino/delicado) ──
-  const bW = isFem ? 2 : 2.6;
-  const armCor = regata ? sk : shade(cor, -14);
-  const armHl = regata ? skH : shade(cor, 12);
+  // ─────────────────────────────────────────────
+  // 5. Braços — anatomia mais legível
+  // ─────────────────────────────────────────────
+  const bW = isFem ? 1.95 : 2.35;
+  const armY = tY + 1.2;
+
   // Esquerdo
-  R(tX - bW, tY + 1 + armSwing, bW, 8.2, armCor);
-  if (!regata) {
-    R(tX - bW, tY + 1.2 + armSwing, 0.8, 5.8, armHl);
-    // Pele visível se manga curta
-    if (camisaModelo !== "jaqueta") R(tX - bW, tY + 6.8 + armSwing, bW, 2.4, sk);
-  }
-  R(tX - bW, tY + 8.8 + armSwing, bW, 1.4, sk); // Mão
+  R(tX - bW - 0.35, armY + armSwing, bW + 0.35, 7.2, corD);
+  R(tX - bW, armY + 0.25 + armSwing, bW - 0.15, 5.8, cor);
+  R(tX - bW + 0.35, armY + 0.4 + armSwing, 0.55, 4.6, corH2);
+  R(tX - bW, armY + 6.0 + armSwing, bW - 0.15, 2.0, sk);
+  R(tX - bW + 0.35, armY + 6.0 + armSwing, 0.7, 0.75, skH);
+  R(tX - bW - 0.1, armY + 7.75 + armSwing, bW + 0.2, 0.55, skD);
+
   // Direito
-  R(tX + tW, tY + 1 - armSwing, bW, 8.2, armCor);
-  if (!regata) {
-    R(tX + tW, tY + 1.2 - armSwing, 0.8, 5.8, armHl);
-    if (camisaModelo !== "jaqueta") R(tX + tW, tY + 6.8 - armSwing, bW, 2.4, sk);
-  }
-  R(tX + tW, tY + 8.8 - armSwing, bW, 1.4, sk);
+  R(tX + tW - 0.05, armY - armSwing, bW + 0.35, 7.2, corD);
+  R(tX + tW + 0.1, armY + 0.25 - armSwing, bW - 0.15, 5.8, cor);
+  R(tX + tW + 0.1, armY + 0.4 - armSwing, 0.55, 4.6, corH2);
+  R(tX + tW + 0.1, armY + 6.0 - armSwing, bW - 0.15, 2.0, sk);
+  R(tX + tW + 0.1, armY + 6.0 - armSwing, 0.7, 0.75, skH);
+  R(tX + tW - 0.1, armY + 7.75 - armSwing, bW + 0.2, 0.55, skD);
 
+  // Arma
   if (armed) {
-    const dx = dir === "left" ? -1 : dir === "right" ? 1 : 0;
-    const dy = dir === "up" ? -1 : dir === "down" ? 1 : 0;
-    const ax = 6 + dx * 2.8; const ay = tY + 5.5 + dy * 2.8 - armSwing;
-    R(ax + dx * 2.8, ay + dy * 2.8, dx ? 6.5 : 1.8, dy ? 6.5 : 1.8, "#1a1e28");
-    R(ax, ay, 2.6, 3, "#3a4450");
+    const weaponX = dir === "left" ? cx - 8 : cx + 5.5;
+    R(weaponX, tY + 4.8, 1.1, 6.0, "#11151d");
+    R(weaponX - 0.4, tY + 4.3, 1.9, 1.1, "#313a47");
+    R(weaponX + (dir === "left" ? -2.0 : 1.1), tY + 9.5, 1.5, 1.2, "#242b35");
   }
 
-  // ── 6. PESCOÇO ──
-  R(-1.5, tY - 1.4, 3 * body.neckScale, 1.8, skS);
-  R(-1, tY - 1.2, 2 * body.neckScale, 1, sk);
+  // ─────────────────────────────────────────────
+  // 6. Pescoço
+  // ─────────────────────────────────────────────
+  R(cx - 1.55 * body.neckScale, 8.25 + breathY, 3.1 * body.neckScale, 2.3, skD);
+  R(cx - 1.15 * body.neckScale, 8.0 + breathY, 2.3 * body.neckScale, 2.1, sk);
 
-  // ── 7. CABEÇA (Formato Stardew Valley — blocky, corte nos cantos) ──
-  const hW = isFem ? 7 : 8; // Cabeça feminina menor/fina
-  const hH = isFem ? 7 : 8;
-  const hX = -hW / 2;
-  const hYF = hY + 1.5;
+  // ─────────────────────────────────────────────
+  // 7. Cabeça — maior densidade de detalhes
+  // ─────────────────────────────────────────────
+  const hW = isFem ? 8.4 : 9.0;
+  const hH = isFem ? 8.8 : 9.2;
+  const hX = cx - hW / 2;
+  const hY = 0.25 + breathY;
 
-  // Crânio principal (Rosto menos redondo, mais blocky e estruturado)
-  R(hX, hYF, hW, hH, skD); // Outline
-  R(hX + 0.4, hYF + 0.4, hW - 0.8, hH - 0.8, sk); // Base pele
-  R(hX + 0.8, hYF + 0.4, hW - 1.6, 2, skH); // Testa iluminada
-  R(hX + 0.8, hYF + hH - 1.8, hW - 1.6, 1.4, skS); // Queixo
-  // Maçãs do rosto (Sombra lateral)
-  R(hX + 0.4, hYF + 4, 0.8, 3, skS);
-  R(hX + hW - 1.2, hYF + 4, 0.8, 3, skS);
+  // Silhueta
+  R(hX - 0.55, hY + 0.55, hW + 1.1, hH - 0.1, hD);
+  R(hX - 0.25, hY + 0.9, hW + 0.5, hH - 0.9, skD);
 
-  if (isFem) {
-    // Blush feminino Stardew Style
-    R(-2.8, hYF + 5, 1, 0.6, "rgba(224,110,124,0.30)");
-    R(1.8, hYF + 5, 1, 0.6, "rgba(224,110,124,0.30)");
-  }
+  // Face
+  R(hX + 0.25, hY + 0.65, hW - 0.5, hH - 1.1, sk);
+  R(hX + 0.75, hY + 0.8, hW - 1.5, 1.9, skH);
+  R(hX + 0.45, hY + 6.8, hW - 0.9, 1.5, skS);
 
-  // ── 8. CABELO FRONTAL (Estilos clássicos Stardew/Ragnarok) ──
-  const hairFront = (estilo: HairStyle) => {
-    const hh = hHighlight; const hs = hShadow;
-    switch (estilo) {
+  // Laterais do rosto / mandíbula
+  R(hX + 0.25, hY + 3.8, 0.7, 3.0, skS);
+  R(hX + hW - 0.95, hY + 3.8, 0.7, 3.0, skS);
+  R(hX + 1.2, hY + 7.5, hW - 2.4, 0.7, skD);
+
+  // Orelhas
+  R(hX - 0.85, hY + 3.6, 1.0, 2.5, skD);
+  R(hX - 0.55, hY + 3.85, 0.65, 1.65, sk);
+  R(hX + hW - 0.15, hY + 3.6, 1.0, 2.5, skD);
+  R(hX + hW - 0.1, hY + 3.85, 0.65, 1.65, sk);
+
+  // ─────────────────────────────────────────────
+  // 8. Cabelo — volume, mechas e profundidade
+  // ─────────────────────────────────────────────
+  const hairFront = (style: HairStyle) => {
+    // Base superior
+    R(hX - 0.15, hY - 0.65, hW + 0.3, 3.2, hD);
+    R(hX + 0.25, hY - 0.45, hW - 0.5, 2.45, hair);
+    R(hX + 1.0, hY - 0.25, hW - 2.5, 0.65, hH);
+    R(hX + 0.6, hY + 1.1, 1.2, 1.0, hH2);
+    R(hX + hW - 1.8, hY + 1.1, 1.2, 1.0, hS);
+
+    switch (style) {
       case "raspado":
-        R(hX + 0.8, hYF, hW - 1.6, 1.5, hs);
+        R(hX + 0.8, hY + 0.4, hW - 1.6, 1.1, hS);
         break;
+
       case "moicano":
-        R(-1.5, hYF - 2, 3, 5, hs);
-        R(-1, hYF - 2, 2, 4.4, opts.cabelo);
-        R(-0.5, hYF - 1.8, 1, 3.4, hh);
+        R(cx - 1.8, hY - 2.5, 3.6, 4.2, hD);
+        R(cx - 1.25, hY - 2.3, 2.5, 3.8, hair);
+        R(cx - 0.7, hY - 2.0, 1.2, 2.6, hH);
         break;
-      case "coque":
-        R(hX + 0.8, hYF, hW - 1.6, 3, opts.cabelo);
-        R(hX + 1.6, hYF, hW - 3.2, 1, hh);
-        R(-1.5, hYF - 2, 3, 3, opts.cabelo); // Coque alto
-        break;
+
       case "afro":
-        R(hX - 0.8, hYF - 0.8, hW + 1.6, hH - 1.6, opts.cabelo);
-        R(hX, hYF - 0.4, hW, 1.5, hh);
-        break;
-      case "cacheado": {
-        R(hX + 0.4, hYF, hW - 0.8, 3, opts.cabelo);
-        for (let i = 0; i < 4; i++) {
-          const bx = hX + 1 + i * (hW - 3) / 3;
-          R(bx, hYF + 2.2 + (i % 2) * 0.6, 1.4, 1.4, i % 2 ? hh : opts.cabelo);
+        R(hX - 1.1, hY - 1.2, hW + 2.2, hH + 0.8, hD);
+        R(hX - 0.55, hY - 0.85, hW + 1.1, hH - 0.1, hair);
+        for (let i = 0; i < 8; i++) {
+          const bx = hX - 0.2 + i * 1.25;
+          R(bx, hY - 0.55 + (i % 2) * 0.25, 0.65, 0.55, i % 3 === 0 ? hH : hH2);
         }
-        R(hX - 0.4, hYF + 3.2, 1.2, 3, opts.cabelo);
-        R(hX + hW - 0.8, hYF + 3.2, 1.2, 3, opts.cabelo);
         break;
-      }
+
+      case "cacheado":
+        for (let i = 0; i < 6; i++) {
+          const bx = hX + 0.4 + i * 1.35;
+          const by = hY + 0.8 + (i % 2) * 0.7;
+          R(bx, by, 1.25, 1.25, i % 2 ? hH2 : hair);
+          R(bx + 0.25, by, 0.55, 0.35, hH);
+        }
+        R(hX - 0.35, hY + 2.8, 1.25, 3.6, hair);
+        R(hX + hW - 0.9, hY + 2.8, 1.25, 3.6, hS);
+        break;
+
       case "ondulado":
-        R(hX + 0.4, hYF, hW - 0.8, 3, opts.cabelo);
-        R(hX - 0.4, hYF + 3.2, 1.4, 4, opts.cabelo);
-        R(hX + hW - 1, hYF + 3.2, 1.4, 4, opts.cabelo);
+        R(hX - 0.3, hY + 2.4, 1.5, 4.4, hair);
+        R(hX + hW - 1.2, hY + 2.2, 1.5, 4.6, hS);
+        R(hX + 1.1, hY + 2.3, 2.2, 0.8, hH2);
+        R(hX + hW - 3.0, hY + 3.0, 1.8, 0.7, hH2);
         break;
+
       case "franja":
-        R(hX + 0.4, hYF, hW - 0.8, 3, opts.cabelo);
-        R(hX + 0.8, hYF + 2.8, hW - 1.6, 1.2, opts.cabelo); // Franja reta
-        R(hX + 1.2, hYF + 3.8, 1.5, 0.6, hs);
+        poly([
+          [hX + 0.35, hY + 1.3],
+          [hX + hW - 0.45, hY + 1.3],
+          [hX + hW - 1.3, hY + 3.55],
+          [cx + 0.5, hY + 3.1],
+          [cx - 0.2, hY + 2.6],
+          [hX + 1.0, hY + 3.4],
+        ], hair);
+        R(hX + 1.0, hY + 1.3, 1.8, 0.5, hH);
         break;
+
       case "trancas":
-        R(hX + 0.4, hYF, hW - 0.8, 3, opts.cabelo);
-        R(-1.5, hYF + 3.6, 3, 1.2, opts.cabelo);
+        R(hX - 0.35, hY + 2.5, 1.5, 6.0, hair);
+        R(hX + hW - 1.15, hY + 2.5, 1.5, 6.0, hS);
+        for (let i = 0; i < 4; i++) {
+          R(hX - 0.2, hY + 3 + i * 1.25, 1.15, 0.55, i % 2 ? hH : hS);
+          R(hX + hW - 0.95, hY + 3 + i * 1.25, 1.15, 0.55, i % 2 ? hH2 : hS);
+        }
         break;
+
       case "bob":
-        R(hX - 0.2, hYF, hW + 0.4, 3, opts.cabelo);
-        R(hX - 0.2, hYF + 3, 1.6, 3.2, opts.cabelo);
-        R(hX + hW - 1.4, hYF + 3, 1.6, 3.2, opts.cabelo);
+        R(hX - 0.45, hY + 2.5, 1.5, 4.7, hair);
+        R(hX + hW - 1.05, hY + 2.5, 1.5, 4.7, hS);
+        R(hX + 1.0, hY + 2.3, hW - 2.0, 0.7, hH2);
         break;
-      case "social":
-        R(hX + 0.4, hYF, hW - 0.8, 3, opts.cabelo);
-        R(hX + 0.8, hYF, 4, 1, hh);
-        R(hX + 0.4, hYF + 3, 1.2, 3.6, hs); // Partido
+
+      case "coque":
+        R(cx - 1.9, hY - 2.0, 3.8, 3.1, hD);
+        R(cx - 1.45, hY - 1.75, 2.9, 2.6, hair);
+        R(cx - 0.8, hY - 1.55, 1.2, 0.55, hH);
         break;
+
       case "rabo":
-        R(hX + 0.4, hYF, hW - 0.8, 3, opts.cabelo);
+        R(hX + hW - 0.1, hY + 1.8, 2.4, 6.2, hD);
+        R(hX + hW + 0.25, hY + 2.0, 1.7, 5.4, hair);
+        R(hX + hW + 0.4, hY + 2.1, 0.6, 4.2, hH);
         break;
-      case "longo":
-      case "longo_liso":
+
       default:
-        R(hX + 0.4, hYF, hW - 0.8, 3.2, opts.cabelo);
-        R(hX + 1.2, hYF, 4, 1, hh);
-        if (estilo === "longo") {
-          R(hX + 0.6, hYF + 3.8, 1.4, 2, opts.cabelo);
-          R(hX + hW - 2, hYF + 3.8, 1.4, 2, opts.cabelo);
+        // Corte curto / social / longo
+        R(hX + 0.4, hY + 1.8, hW - 0.8, 1.15, hair);
+        R(hX + 0.9, hY + 1.8, 2.0, 0.45, hH);
+        R(hX + hW - 2.5, hY + 1.8, 1.35, 0.45, hS);
+
+        if (style === "social") {
+          R(hX + 0.5, hY + 2.3, 1.0, 2.7, hS);
+          R(hX + 1.0, hY + 2.3, 0.55, 2.0, hH2);
+        }
+
+        if (style === "longo" || style === "longo_liso") {
+          R(hX - 0.2, hY + 2.4, 1.5, 7.0, hair);
+          R(hX + hW - 1.3, hY + 2.4, 1.5, 7.0, hS);
+          R(hX + 0.05, hY + 7.5, 1.2, 1.4, hS);
+          R(hX + hW - 1.05, hY + 7.5, 1.2, 1.4, hD);
         }
         break;
     }
   };
-  if (dir !== "up") hairFront(cabeloEstilo);
-  else {
-    R(hX, hYF, hW, hH, opts.cabelo);
-    R(hX + 1.2, hYF, hW - 2.4, 3, hHighlight);
-  }
 
-  // ── 8b. Capacete / Boina ──
-  if (u?.capacete) {
-    R(hX - 0.4, hYF, hW + 0.8, 3.2, u.capacete);
-    R(hX + 0.4, hYF, hW - 0.8, 1.2, shade(u.capacete, 16));
-    R(hX - 0.6, hYF + 3.2, hW + 1.2, 1, shade(u.capacete, -24));
-  }
-
-  // ── 9. ROSTO (Diferença marcante M/F Stardew Style) ──
   if (dir !== "up") {
-    const off = dir === "left" ? -1.4 : dir === "right" ? 1.4 : 0;
-    const eyeY = hYF + 3.8;
-    const eyeW = isFem ? 1.4 : 1.2;
-    const eyeH = isFem ? 1.4 : 1.1;
+    hairFront(cabeloEstilo);
+  } else {
+    R(hX - 0.25, hY + 0.1, hW + 0.5, hH - 0.3, hD);
+    R(hX + 0.25, hY + 0.15, hW - 0.5, hH - 1.0, hair);
+    R(hX + 1.0, hY + 0.3, hW - 2.0, 0.7, hH);
+  }
 
-    // Olho Esquerdo (Desenho pixel-art blocky, não vetorial)
-    R(-2.2 + off - eyeW/2, eyeY - eyeH/2, Math.ceil(eyeW), Math.ceil(eyeH), "#f2f5f8");
-    R(-2.2 + off - eyeW/2 + 0.3, eyeY - eyeH/2 + 0.1, Math.ceil(eyeW * 0.68), Math.ceil(eyeH * 0.85), iris);
-    R(-2.2 + off - eyeW/2 + 0.5, eyeY - eyeH/2 + 0.3, 0.6, 0.7, "#141824");
-    R(-2.4 + off, eyeY - 0.4, 0.4, 0.4, "#ffffff"); // Brilho pupila
-    R(-2.2 + off - eyeW, eyeY - eyeH + 0.1, eyeW * 2, 0.5, shade(pele, -18)); // Cílio superior
+  // ─────────────────────────────────────────────
+  // 9. Boina / capacete do uniforme
+  // ─────────────────────────────────────────────
+  if (u?.capacete) {
+    R(hX - 0.75, hY - 1.0, hW + 1.5, 3.0, shade(u.capacete, -28));
+    R(hX - 0.35, hY - 1.25, hW + 0.7, 2.45, u.capacete);
+    R(hX + 0.5, hY - 0.95, hW - 1.7, 0.7, shade(u.capacete, 18));
+    R(hX - 1.0, hY + 1.0, hW + 2.0, 0.7, shade(u.capacete, -35));
 
-    // Olho Direito
-    R(2.2 + off - eyeW/2, eyeY - eyeH/2, Math.ceil(eyeW), Math.ceil(eyeH), "#f2f5f8");
-    R(2.2 + off - eyeW/2 + 0.3, eyeY - eyeH/2 + 0.1, Math.ceil(eyeW * 0.68), Math.ceil(eyeH * 0.85), iris);
-    R(2.2 + off - eyeW/2 + 0.5, eyeY - eyeH/2 + 0.3, 0.6, 0.7, "#141824");
-    R(2.0 + off, eyeY - 0.4, 0.4, 0.4, "#ffffff");
-    R(2.2 + off - eyeW, eyeY - eyeH + 0.1, eyeW * 2, 0.5, shade(pele, -18));
+    // Insígnia central
+    R(cx - 0.65, hY - 0.8, 1.3, 1.25, "#b89a4d");
+    R(cx - 0.35, hY - 0.55, 0.7, 0.75, "#e2c86e");
+    R(cx - 0.15, hY - 0.35, 0.3, 0.35, "#596b42");
+  }
 
-    // Sobrancelhas: feminina fina, masculina grossa
-    R(-2.8 + off, hYF + 2.5, 2, isFem ? 0.4 : 0.7, shade(opts.cabelo, -18));
-    R(0.8 + off, hYF + 2.5, 2, isFem ? 0.4 : 0.7, shade(opts.cabelo, -18));
+  // ─────────────────────────────────────────────
+  // 10. Rosto — olhos, sobrancelhas, nariz e boca
+  // ─────────────────────────────────────────────
+  if (dir !== "up") {
+    const faceOff = dir === "left" ? -1.0 : dir === "right" ? 1.0 : 0;
+    const eyeY = hY + 4.55;
 
-    // Nariz sutil
-    R(off * 0.4, hYF + 5.2, isFem ? 0.6 : 0.8, isFem ? 0.8 : 1, skS);
+    const drawEye = (ex: number, brow: string) => {
+      // Sombra / contorno
+      R(ex - 0.95, eyeY - 0.8, 1.9, 1.65, skD);
+      // Branco
+      R(ex - 0.72, eyeY - 0.55, 1.45, 1.15, "#f4f3ed");
+      // Íris
+      R(ex - 0.28 + faceOff * 0.08, eyeY - 0.45, 0.68, 0.95, iris);
+      // Pupila
+      R(ex - 0.06 + faceOff * 0.08, eyeY - 0.35, 0.32, 0.72, "#10141b");
+      // Brilho
+      R(ex + 0.05 + faceOff * 0.08, eyeY - 0.3, 0.18, 0.18, "#ffffff");
+      // Sobrancelha
+      R(ex - 0.95, eyeY - 1.45, 1.9, isFem ? 0.38 : 0.55, brow);
+    };
+
+    drawEye(cx - 2.25 + faceOff, shade(hair, -18));
+    drawEye(cx + 2.25 + faceOff, shade(hair, -18));
+
+    // Nariz com luz e sombra
+    R(cx - 0.25 + faceOff * 0.35, hY + 5.35, 0.55, 1.05, skS);
+    R(cx + 0.15 + faceOff * 0.35, hY + 5.2, 0.35, 0.45, skH);
+
+    // Bochechas
+    if (isFem) {
+      R(cx - 3.45 + faceOff, hY + 5.75, 0.8, 0.45, "rgba(224,110,124,0.34)");
+      R(cx + 2.65 + faceOff, hY + 5.75, 0.8, 0.45, "rgba(224,110,124,0.34)");
+    }
 
     // Boca
-    if (dir === "down") {
-      if (isFem) {
-        // Lábio rosado
-        R(-1 + off, hYF + 6.6, 2, 0.5, shade(pele, -38));
-        R(-0.5 + off, hYF + 7, 1, 0.4, shade(pele, -12));
-      } else {
-        // Traço firme
-        R(-1.1 + off, hYF + 6.7, 2.2, 0.5, shade(pele, -35));
-      }
+    R(cx - 1.0 + faceOff, hY + 6.9, 2.0, 0.48, shade(pele, -40));
+    R(cx - 0.55 + faceOff, hY + 7.35, 1.1, 0.32, shade(pele, -16));
+    if (isFem) {
+      R(cx - 0.75 + faceOff, hY + 6.78, 1.5, 0.32, "#a55c62");
     }
   }
 
-  // Indicador de self
+  // ─────────────────────────────────────────────
+  // 11. Indicador self
+  // ─────────────────────────────────────────────
   if (self) {
-    const bob = Math.sin(time * 0.005) * 1.2;
-    R(-1.5, hYF - 4.5 + bob, 3, 1, "#7ee0ff");
+    const bob = Math.sin(time * 0.005) * 0.6;
+    R(cx - 1.5, hY - 4.0 + bob, 3.0, 0.6, "#7ee0ff");
+    R(cx - 0.7, hY - 3.35 + bob, 1.4, 0.35, "#b7f2ff");
   }
+
+  // ─────────────────────────────────────────────
+  // 12. Composição no canvas principal
+  // ─────────────────────────────────────────────
+  //
+  // 24 x 34 unidades:
+  // - mesma ordem de grandeza do renderer original;
+  // - não escala o personagem 4x no mundo;
+  // - a escala só aumenta a resolução interna da arte.
+  //
+  // A posição x/y continua sendo o centro/base do personagem.
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  const drawW = 24;
+  const drawH = 34;
+
+  // Centraliza a arte no ponto original.
+  ctx.drawImage(
+    off,
+    x - drawW / 2,
+    y - drawH,
+    drawW,
+    drawH
+  );
+
+  ctx.restore();
 }
